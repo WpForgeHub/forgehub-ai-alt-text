@@ -32,13 +32,13 @@ if ( ! function_exists( 'wpfh_aat_fs' ) ) {
         global $wpfh_aat_fs;
 
         if ( ! isset( $wpfh_aat_fs ) ) {
-            // Include Freemius SDK if available
+            // Include Freemius SDK if available in bundle
             $freemius_path = WPFH_AAT_PATH . 'includes/freemius/start.php';
             if ( file_exists( $freemius_path ) ) {
                 require_once $freemius_path;
 
                 $wpfh_aat_fs = fs_dynamic_init( [
-                    'id'               => '16001', // Replace with production Freemius ID
+                    'id'               => '16001', // Configured in Freemius Developer Dashboard
                     'slug'             => 'wpfh-ai-alt-text',
                     'type'             => 'plugin',
                     'public_key'       => 'pk_placeholder',
@@ -51,7 +51,7 @@ if ( ! function_exists( 'wpfh_aat_fs' ) ) {
                     ],
                 ] );
             } else {
-                // Fallback dummy object for Free distribution without SDK
+                // Standalone fallback object for Free distribution
                 $wpfh_aat_fs = new class {
                     public function is__premium_only() { return false; }
                     public function can_use_premium_code() { return false; }
@@ -72,24 +72,11 @@ if ( ! function_exists( 'wpfh_aat_fs' ) ) {
 require_once WPFH_AAT_PATH . 'includes/class-wpfh-ai-client.php';
 require_once WPFH_AAT_PATH . 'includes/class-wpfh-aat-admin.php';
 
-// Load Pro Features (Separated by Freemius Preprocessor)
-if ( wpfh_aat_fs()->is__premium_only() ) {
-    if ( wpfh_aat_fs()->can_use_premium_code() ) {
-        require_once WPFH_AAT_PATH . 'includes/class-wpfh-aat-pro.php';
-    }
-}
-
 /**
  * Main Plugin Initialization
  */
 function wpfh_aat_init() {
     WPFH_AAT_Admin::init();
-
-    if ( wpfh_aat_fs()->is__premium_only() && wpfh_aat_fs()->can_use_premium_code() ) {
-        if ( class_exists( 'WPFH_AAT_Pro' ) ) {
-            WPFH_AAT_Pro::init();
-        }
-    }
 }
 add_action( 'plugins_loaded', 'wpfh_aat_init' );
 
