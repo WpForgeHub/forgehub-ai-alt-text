@@ -1,0 +1,68 @@
+/**
+ * WPForgeHub AI Alt-Text — Admin Styles
+ */
+
+.wpfh-aat-wrap {
+    max-width: 900px;
+    margin-top: 20px;
+}
+
+.wpfh-aat-media-action {
+    display: inline-flex;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.wpfh-aat-media-action .dashicons {
+    color: #2563eb;
+}
+
+.wpfh-aat-status.is-loading {
+    color: #2563eb;
+    font-style: italic;
+}
+
+.wpfh-aat-status.is-success {
+    color: #16a34a;
+    font-weight: 600;
+}
+
+.wpfh-aat-status.is-error {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.wpfh-aat-pro-card {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-left: 4px solid #2563eb;
+    border-radius: 8px;
+    padding: 24px 32px;
+    margin-top: 30px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.wpfh-aat-pro-card h2 {
+    margin-top: 0;
+    color: #0f172a;
+}
+
+.wpfh-aat-feature-list {
+    margin: 16px 0 24px 0;
+    list-style: none;
+    padding: 0;
+}
+
+.wpfh-aat-feature-list li {
+    margin-bottom: 10px;
+    font-size: 14px;
+    color: #334155;
+}
+
+.wpfh-aat-bulk-box {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 30px;
+    margin-top: 20px;
+}
