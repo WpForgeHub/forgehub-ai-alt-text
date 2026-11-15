@@ -1,6 +1,11 @@
 # WPForgeHub AI Alt-Text & Image SEO Generator (BYOK)
 
+<p align="center">
+  <img src="assets/banner-772x250.png" alt="WPForgeHub AI Alt Text Banner" width="100%" style="border-radius: 12px;" />
+</p>
+
 [![WordPress 6.0+](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)](https://wordpress.org)
+[![Tested up to 6.7](https://img.shields.io/badge/Tested%20up%20to-6.7-brightgreen.svg)](https://wordpress.org)
 [![PHP 7.4-8.3](https://img.shields.io/badge/PHP-7.4%20--%208.3-green.svg)](https://php.net)
 [![License: GPL v2](https://img.shields.io/badge/License-GPLv2-orange.svg)](license.txt)
 [![Zero Bloat](https://img.shields.io/badge/Assets-%3C50KB-purple.svg)](https://wpforgehub.com)
@@ -33,7 +38,7 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 
 ## 🚀 Free vs. PRO Feature Matrix
 
-| Feature | FREE (WordPress.org) | PRO ($5/mo or $39/yr) |
+| Feature | FREE (WordPress.org) | PRO ($3.99/mo or $19/yr) |
 | :--- | :---: | :---: |
 | **Media Library 1-Click Alt-Text** | ✅ | ✅ |
 | **All 6 AI Providers (BYOK)** | ✅ | ✅ |
@@ -45,7 +50,7 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 | **WooCommerce Context (Title, SKU, Category)** | ❌ | **✅ Deep SEO** |
 | **Priority Developer Support** | ❌ | **✅ Included** |
 
-👉 **[Upgrade to PRO on WPForgeHub](https://wpforgehub.com/plugins/ai-alt-text/)** to unlock automated bulk scanning and instant upload generation!
+👉 **[Upgrade to PRO on WPForgeHub](https://wpforgehub.com/#products)** to unlock automated bulk scanning and instant upload generation!
 
 ---
 
