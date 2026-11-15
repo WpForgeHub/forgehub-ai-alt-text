@@ -467,6 +467,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
             if ( ! in_array( $mime_type, $allowed_mimes, true ) ) {
                 return [
                     'success' => false,
+                    /* translators: %s: MIME type of the unsupported image */
                     'error'   => sprintf( __( 'Unsupported image format (%s). Vision AI supports JPG, PNG, and WebP only.', 'wpfh-ai-alt-text' ), $mime_type ?: 'unknown' ),
                 ];
             }
