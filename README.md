@@ -1,7 +1,7 @@
 # WPForgeHub AI Alt-Text & Image SEO Generator (BYOK)
 
 <p align="center">
-  <img src="assets/banner-1544x500.png?v=2" alt="WPForgeHub AI Alt Text Banner" width="100%" style="border-radius: 12px;" />
+  <img src="assets/wpfh-ai-alt-text-banner.png" alt="WPForgeHub AI Alt Text Banner" width="100%" style="border-radius: 12px;" />
 </p>
 
 [![WordPress 6.0+](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)](https://wordpress.org)
