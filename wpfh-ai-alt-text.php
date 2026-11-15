@@ -57,7 +57,7 @@ if ( ! function_exists( 'wpfh_aat_fs' ) ) {
                     public function is__premium_only() { return false; }
                     public function can_use_premium_code() { return false; }
                     public function is_plan( $plan ) { return false; }
-                    public function get_upgrade_url() { return 'https://wpforgehub.com/plugins/ai-alt-text/#pro'; }
+                    public function get_upgrade_url() { return 'https://wpforgehub.com/upgrade/ai-alt-text/?utm_source=plugin_admin&utm_medium=upgrade_btn'; }
                 };
             }
         }
