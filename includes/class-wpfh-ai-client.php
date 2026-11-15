@@ -115,27 +115,17 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                 ];
             }
 
-            // Read image file and convert to base64
-            if ( ! file_exists( $image_path ) ) {
+            // Prepare, validate and optimize image (format filter & memory downscaler)
+            $prepared = self::prepare_image_base64( $image_path );
+            if ( ! $prepared['success'] ) {
                 return [
                     'success' => false,
-                    'error'   => __( 'Image file could not be found on server.', 'wpfh-ai' ),
+                    'error'   => $prepared['error'],
                 ];
             }
 
-            $mime_type = wp_check_filetype( $image_path )['type'];
-            if ( empty( $mime_type ) ) {
-                $mime_type = 'image/jpeg';
-            }
-
-            $image_data = file_get_contents( $image_path );
-            if ( false === $image_data ) {
-                return [
-                    'success' => false,
-                    'error'   => __( 'Unable to read image data.', 'wpfh-ai' ),
-                ];
-            }
-            $base64_image = base64_encode( $image_data );
+            $base64_image = $prepared['base64'];
+            $mime_type    = $prepared['mime_type'];
 
             // Default prompt for Alt-Text if empty
             if ( empty( $prompt ) ) {
@@ -425,13 +415,23 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
 
             $data = json_decode( $text, true );
             if ( json_last_error() === JSON_ERROR_NONE && is_array( $data ) ) {
+                $alt = $data['alt_text'] ?? ( $data['alt'] ?? ( $data['altText'] ?? ( $data['alternative_text'] ?? '' ) ) );
+                $title = $data['title'] ?? ( $data['image_title'] ?? ( $data['name'] ?? '' ) );
+                $caption = $data['caption'] ?? ( $data['image_caption'] ?? '' );
+                $description = $data['description'] ?? ( $data['desc'] ?? ( $data['image_description'] ?? '' ) );
+
+                // Fallback: If alt is empty but title exists, use title as alt
+                if ( empty( $alt ) && ! empty( $title ) ) {
+                    $alt = $title;
+                }
+
                 return [
                     'success' => true,
                     'data'    => [
-                        'alt_text'    => sanitize_text_field( $data['alt_text'] ?? '' ),
-                        'caption'     => sanitize_text_field( $data['caption'] ?? '' ),
-                        'title'       => sanitize_text_field( $data['title'] ?? '' ),
-                        'description' => sanitize_textarea_field( $data['description'] ?? '' ),
+                        'alt_text'    => sanitize_text_field( $alt ),
+                        'caption'     => sanitize_text_field( $caption ),
+                        'title'       => sanitize_text_field( $title ),
+                        'description' => sanitize_textarea_field( $description ),
                     ],
                 ];
             }
@@ -445,6 +445,85 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                     'title'       => '',
                     'description' => '',
                 ],
+            ];
+        }
+
+        /**
+         * Prepare, validate and downscale image for Vision AI.
+         * Ensures maximum 1200px dimensions to avoid memory crashes and API payload limits.
+         */
+        public static function prepare_image_base64( $image_path ) {
+            if ( ! file_exists( $image_path ) ) {
+                return [
+                    'success' => false,
+                    'error'   => __( 'Image file could not be found on server.', 'wpfh-ai-alt-text' ),
+                ];
+            }
+
+            $file_info = wp_check_filetype( $image_path );
+            $mime_type = $file_info['type'];
+            $allowed_mimes = [ 'image/jpeg', 'image/png', 'image/webp' ];
+
+            if ( ! in_array( $mime_type, $allowed_mimes, true ) ) {
+                return [
+                    'success' => false,
+                    'error'   => sprintf( __( 'Unsupported image format (%s). Vision AI supports JPG, PNG, and WebP only.', 'wpfh-ai-alt-text' ), $mime_type ?: 'unknown' ),
+                ];
+            }
+
+            $filesize = filesize( $image_path );
+            $max_dim  = 1200;
+
+            // If file is under 1.5MB and small dimensions, encode directly
+            if ( $filesize < 1572864 ) {
+                $size = @getimagesize( $image_path );
+                if ( $size && $size[0] <= $max_dim && $size[1] <= $max_dim ) {
+                    $data = file_get_contents( $image_path );
+                    if ( false !== $data ) {
+                        return [
+                            'success'   => true,
+                            'mime_type' => $mime_type,
+                            'base64'    => base64_encode( $data ),
+                        ];
+                    }
+                }
+            }
+
+            // Downscale high-resolution images using WordPress Image Editor
+            $editor = wp_get_image_editor( $image_path );
+            if ( ! is_wp_error( $editor ) ) {
+                $editor->resize( $max_dim, $max_dim, false );
+                $editor->set_quality( 82 );
+                $upload_dir = wp_upload_dir();
+                $temp_path  = trailingslashit( $upload_dir['basedir'] ) . 'wpfh_opt_' . uniqid() . '.jpg';
+                $saved      = $editor->save( $temp_path, 'image/jpeg' );
+
+                if ( ! is_wp_error( $saved ) && file_exists( $temp_path ) ) {
+                    $data = file_get_contents( $temp_path );
+                    @unlink( $temp_path );
+                    if ( false !== $data ) {
+                        return [
+                            'success'   => true,
+                            'mime_type' => 'image/jpeg',
+                            'base64'    => base64_encode( $data ),
+                        ];
+                    }
+                }
+            }
+
+            // Safe fallback
+            $data = file_get_contents( $image_path );
+            if ( false === $data ) {
+                return [
+                    'success' => false,
+                    'error'   => __( 'Unable to read image data.', 'wpfh-ai-alt-text' ),
+                ];
+            }
+
+            return [
+                'success'   => true,
+                'mime_type' => $mime_type,
+                'base64'    => base64_encode( $data ),
             ];
         }
     }

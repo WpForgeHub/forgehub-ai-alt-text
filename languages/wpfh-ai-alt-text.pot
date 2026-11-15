@@ -1,0 +1,59 @@
+# Copyright (C) 2026 WPForgeHub
+# This file is distributed under the GPLv2 or later.
+msgid ""
+msgstr ""
+"Project-Id-Version: WPForgeHub AI Alt-Text & Image SEO Generator (BYOK) 1.1.0\n"
+"Report-Msgid-Bugs-To: support@wpforgehub.com\n"
+"POT-Creation-Date: 2026-11-15T02:15:00+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2026-MO-DA HO:MI+ZONE\n"
+"Last-Translator: WPForgeHub <support@wpforgehub.com>\n"
+"Language-Team: WPForgeHub <support@wpforgehub.com>\n"
+"Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: includes/class-wpfh-aat-admin.php:29
+msgid "AI Alt-Text Settings"
+msgstr ""
+
+#: includes/class-wpfh-aat-admin.php:126
+msgid "Analyzing image..."
+msgstr ""
+
+#: includes/class-wpfh-aat-admin.php:127
+msgid "Alt-Text generated!"
+msgstr ""
+
+#: includes/class-wpfh-aat-admin.php:128
+msgid "Failed to generate."
+msgstr ""
+
+#: includes/class-wpfh-aat-admin.php:150
+msgid "AI Metadata"
+msgstr ""
+
+#: includes/class-wpfh-aat-admin.php:186
+msgid "Generate with AI"
+msgstr ""
+
+#: includes/class-wpfh-aat-admin.php:394
+msgid "AI Provider"
+msgstr ""
+
+#: includes/class-wpfh-aat-admin.php:407
+msgid "API Key"
+msgstr ""
+
+#: includes/class-wpfh-aat-admin.php:518
+msgid "Instant Auto-Generate on Upload"
+msgstr ""
+
+#: includes/class-wpfh-aat-admin.php:527
+msgid "WooCommerce Product Context Injection"
+msgstr ""
+
+#: includes/class-wpfh-aat-admin.php:542
+msgid "Background Bulk Scanner"
+msgstr ""

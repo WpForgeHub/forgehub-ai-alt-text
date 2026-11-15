@@ -209,40 +209,90 @@
                         var description = response.data.description;
                         var updated     = response.data.updated || [];
 
-                        // 1. Alt Text
+                        // Helper to update DOM inputs with native bubbling events for Backbone / Gutenberg
+                        function syncField(selectors, val) {
+                            if (typeof val === 'undefined' || val === null || val === '') return;
+                            $(selectors).each(function() {
+                                this.value = val;
+                                $(this).val(val);
+                                try {
+                                    this.dispatchEvent(new Event('input', { bubbles: true }));
+                                    this.dispatchEvent(new Event('change', { bubbles: true }));
+                                } catch (e) {}
+                                $(this).trigger('input').trigger('change');
+                            });
+                        }
+
+                        // 1. Sync directly to WordPress Backbone Media Model (instant reactivity in grid modal)
+                        if (window.wp && wp.media && typeof wp.media.attachment === 'function') {
+                            try {
+                                var attModel = wp.media.attachment(attachmentId);
+                                if (attModel) {
+                                    if (altText && (updated.indexOf('alt') !== -1 || !updated.length)) {
+                                        attModel.set('alt', altText);
+                                    }
+                                    if (title && (updated.indexOf('title') !== -1 || !updated.length)) {
+                                        attModel.set('title', title);
+                                    }
+                                    if (caption && (updated.indexOf('caption') !== -1 || !updated.length)) {
+                                        attModel.set('caption', caption);
+                                    }
+                                    if (description && (updated.indexOf('description') !== -1 || !updated.length)) {
+                                        attModel.set('description', description);
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('[WPFH] wp.media Backbone model sync:', e);
+                            }
+                        }
+
+                        // 2. Alt Text DOM sync (Two-column modal, single column modal, edit-post, list-table)
                         if (altText && (updated.indexOf('alt') !== -1 || !updated.length)) {
-                            var $modalAltField = $('[data-setting="alt"] textarea, [data-setting="alt"] input');
-                            if ($modalAltField.length) {
-                                $modalAltField.val(altText).trigger('change').trigger('input');
-                            }
-                            var $legacyAltField = $('#attachment_alt, [name="attachments[' + attachmentId + '][image_alt]"]');
-                            if ($legacyAltField.length) {
-                                $legacyAltField.val(altText).trigger('change').trigger('input');
-                            }
+                            var altSelectors = [
+                                '#attachment-details-two-column-alt-text',
+                                '#attachment-details-alt-text',
+                                '[data-setting="alt"] textarea',
+                                '[data-setting="alt"] input',
+                                '#attachment_alt',
+                                '[name="attachments[' + attachmentId + '][image_alt]"]'
+                            ].join(',');
+                            syncField(altSelectors, altText);
                         }
 
-                        // 2. Title
+                        // 3. Title DOM sync
                         if (title && (updated.indexOf('title') !== -1 || !updated.length)) {
-                            var $titleField = $('[data-setting="title"] input, #attachment_title, #title, [name="attachments[' + attachmentId + '][post_title]"]');
-                            if ($titleField.length) {
-                                $titleField.val(title).trigger('change').trigger('input');
-                            }
+                            var titleSelectors = [
+                                '#attachment-details-two-column-title',
+                                '#attachment-details-title',
+                                '[data-setting="title"] input',
+                                '#title',
+                                '[name="attachments[' + attachmentId + '][post_title]"]'
+                            ].join(',');
+                            syncField(titleSelectors, title);
                         }
 
-                        // 3. Caption
+                        // 4. Caption DOM sync
                         if (caption && (updated.indexOf('caption') !== -1 || !updated.length)) {
-                            var $captionField = $('[data-setting="caption"] textarea, #attachment_caption, [name="attachments[' + attachmentId + '][post_excerpt]"]');
-                            if ($captionField.length) {
-                                $captionField.val(caption).trigger('change').trigger('input');
-                            }
+                            var captionSelectors = [
+                                '#attachment-details-two-column-caption',
+                                '#attachment-details-caption',
+                                '[data-setting="caption"] textarea',
+                                '#attachment_caption',
+                                '[name="attachments[' + attachmentId + '][post_excerpt]"]'
+                            ].join(',');
+                            syncField(captionSelectors, caption);
                         }
 
-                        // 4. Description
+                        // 5. Description DOM sync
                         if (description && (updated.indexOf('description') !== -1 || !updated.length)) {
-                            var $descField = $('[data-setting="description"] textarea, #attachment_content, [name="attachments[' + attachmentId + '][post_content]"]');
-                            if ($descField.length) {
-                                $descField.val(description).trigger('change').trigger('input');
-                            }
+                            var descSelectors = [
+                                '#attachment-details-two-column-description',
+                                '#attachment-details-description',
+                                '[data-setting="description"] textarea',
+                                '#attachment_content',
+                                '[name="attachments[' + attachmentId + '][post_content]"]'
+                            ].join(',');
+                            syncField(descSelectors, description);
                         }
 
                         setTimeout(function() {
@@ -270,6 +320,66 @@
                     $status.removeClass('is-loading').addClass('is-error').html(wpfhAatData.i18n.error + ' (' + detail + ')');
                 }
             });
+        });
+
+        // =========================================================================
+        // 3. Pro Feature: Background Bulk Scanner Client
+        // =========================================================================
+        var $bulkStatsLabel = $('#wpfh-bulk-stats-label');
+        if ($bulkStatsLabel.length && typeof wpfhAatData !== 'undefined') {
+            $.post(wpfhAatData.ajax_url, {
+                action: 'wpfh_aat_bulk_get_stats',
+                security: wpfhAatData.nonce
+            }, function(res) {
+                if (res.success && res.data) {
+                    var d = res.data;
+                    $bulkStatsLabel.text('Total Images: ' + d.total_images + ' | Missing Alt: ' + d.missing_alt);
+                    if (d.missing_alt === 0) {
+                        $('#wpfh-bulk-status-msg').text('🎉 All images in library have Alt-Text!').css('color', '#10b981');
+                    }
+                }
+            });
+        }
+
+        $(document).on('click', '#wpfh-start-bulk-btn', function(e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var $progressWrap = $('#wpfh-bulk-progress-wrap');
+            var $progressBar  = $('#wpfh-bulk-progress-bar');
+            var $statusMsg    = $('#wpfh-bulk-status-msg');
+
+            $btn.prop('disabled', true).text('⏳ Processing Batch...');
+            $progressWrap.show();
+            $statusMsg.text('Processing images with Vision AI...').css('color', '#2563eb');
+
+            function runBatch() {
+                $.post(wpfhAatData.ajax_url, {
+                    action: 'wpfh_aat_bulk_process_batch',
+                    security: wpfhAatData.nonce
+                }, function(res) {
+                    if (res.success && res.data) {
+                        var d = res.data;
+                        if (d.is_finished) {
+                            $progressBar.css('width', '100%');
+                            $btn.prop('disabled', false).text('✅ Scan Complete');
+                            $statusMsg.text('🎉 All missing alt-texts successfully generated!').css('color', '#10b981');
+                            $bulkStatsLabel.text('Missing Alt: 0 images');
+                        } else {
+                            $statusMsg.text('Remaining to process: ' + d.remaining + ' images...');
+                            runBatch(); // Next chunk
+                        }
+                    } else {
+                        var err = (res.data && res.data.message) ? res.data.message : 'Error in bulk scan.';
+                        $btn.prop('disabled', false).text('🚀 Retry Bulk Scan');
+                        $statusMsg.text(err).css('color', '#ef4444');
+                    }
+                }).fail(function() {
+                    $btn.prop('disabled', false).text('🚀 Retry Bulk Scan');
+                    $statusMsg.text('Server request failed during batch.').css('color', '#ef4444');
+                });
+            }
+
+            runBatch();
         });
 
     });

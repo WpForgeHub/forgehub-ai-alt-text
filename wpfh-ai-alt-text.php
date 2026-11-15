@@ -3,7 +3,7 @@
  * Plugin Name:       WPForgeHub AI Alt-Text & Image SEO Generator (BYOK)
  * Plugin URI:        https://wpforgehub.com/plugins/ai-alt-text/
  * Description:       Generate WCAG-compliant image Alt-Text and SEO titles using your own Google Gemini, OpenAI, Claude, DeepSeek, or OpenRouter API key (BYOK).
- * Version:           1.0.1
+ * Version:           1.1.0
  * Requires at least: 6.0
  * Tested up to:      6.7
  * Requires PHP:      7.4
@@ -20,7 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Version & Path Constants
-define( 'WPFH_AAT_VERSION', '1.0.1' );
+define( 'WPFH_AAT_VERSION', '1.1.0' );
 define( 'WPFH_AAT_FILE', __FILE__ );
 define( 'WPFH_AAT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WPFH_AAT_URL', plugin_dir_url( __FILE__ ) );
@@ -33,9 +33,10 @@ if ( ! function_exists( 'wpfh_aat_fs' ) ) {
         global $wpfh_aat_fs;
 
         if ( ! isset( $wpfh_aat_fs ) ) {
-            // Include Freemius SDK if available in bundle
+            $force_pro     = defined( 'WPFH_AAT_FORCE_PRO' ) && WPFH_AAT_FORCE_PRO;
             $freemius_path = WPFH_AAT_PATH . 'includes/freemius/start.php';
-            if ( file_exists( $freemius_path ) ) {
+
+            if ( file_exists( $freemius_path ) && ! $force_pro ) {
                 require_once $freemius_path;
 
                 $wpfh_aat_fs = fs_dynamic_init( [
@@ -52,11 +53,13 @@ if ( ! function_exists( 'wpfh_aat_fs' ) ) {
                     ],
                 ] );
             } else {
-                // Standalone fallback object for Free distribution
-                $wpfh_aat_fs = new class {
-                    public function is__premium_only() { return false; }
-                    public function can_use_premium_code() { return false; }
-                    public function is_plan( $plan ) { return false; }
+                // Standalone fallback object for Free / Sandbox QA testing
+                $wpfh_aat_fs = new class( $force_pro ) {
+                    private $is_pro;
+                    public function __construct( $is_pro = false ) { $this->is_pro = (bool) $is_pro; }
+                    public function is__premium_only() { return $this->is_pro; }
+                    public function can_use_premium_code() { return $this->is_pro; }
+                    public function is_plan( $plan ) { return $this->is_pro; }
                     public function get_upgrade_url() { return 'https://wpforgehub.com/upgrade/ai-alt-text/?utm_source=plugin_admin&utm_medium=upgrade_btn'; }
                 };
             }
