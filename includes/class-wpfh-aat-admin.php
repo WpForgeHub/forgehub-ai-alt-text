@@ -201,7 +201,9 @@ class WPFH_AAT_Admin {
      * AJAX handler for single image alt-text generation.
      */
     public static function ajax_generate_single() {
-        check_ajax_referer( 'wpfh_aat_nonce', 'security' );
+        if ( ! check_ajax_referer( 'wpfh_aat_nonce', 'security', false ) ) {
+            wp_send_json_error( [ 'message' => __( 'Security token expired. Please refresh the page.', 'wpfh-ai-alt-text' ) ] );
+        }
 
         if ( ! current_user_can( 'upload_files' ) ) {
             wp_send_json_error( [ 'message' => __( 'Permission denied.', 'wpfh-ai-alt-text' ) ] );
@@ -213,7 +215,7 @@ class WPFH_AAT_Admin {
         }
 
         $file_path = get_attached_file( $attachment_id );
-        if ( ! file_path || ! file_exists( $file_path ) ) {
+        if ( ! $file_path || ! file_exists( $file_path ) ) {
             wp_send_json_error( [ 'message' => __( 'Image file not found on disk.', 'wpfh-ai-alt-text' ) ] );
         }
 
@@ -285,8 +287,7 @@ class WPFH_AAT_Admin {
             wp_send_json_error( [ 'message' => $result['error'] ] );
         }
 
-        $data      = $result['data'] ?? [];
-        $overwrite = ! empty( $settings['overwrite_existing'] );
+        $data = $result['data'] ?? [];
 
         // Current attachment metadata
         $current_post = get_post( $attachment_id );
