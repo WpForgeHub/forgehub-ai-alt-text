@@ -47,13 +47,17 @@ class WPFH_AAT_Admin {
 
     public static function get_default_settings() {
         return [
-            'provider'        => 'gemini',
-            'api_key'         => '',
-            'model'           => 'gemini-1.5-flash',
-            'custom_endpoint' => '',
-            'language'        => 'en',
-            'auto_title'      => 0,
-            'brand_context'   => '',
+            'provider'           => 'gemini',
+            'api_key'            => '',
+            'model'              => 'gemini-1.5-flash',
+            'custom_endpoint'    => '',
+            'language'           => 'en',
+            'generate_alt'       => 1,
+            'generate_caption'   => 0,
+            'generate_title'     => 0,
+            'generate_desc'      => 0,
+            'overwrite_existing' => 1,
+            'brand_context'      => '',
         ];
     }
 
@@ -70,11 +74,15 @@ class WPFH_AAT_Admin {
         if ( 'custom' === $clean['provider'] && ! empty( $input['custom_model'] ) ) {
             $model = sanitize_text_field( $input['custom_model'] );
         }
-        $clean['model']           = $model;
-        $clean['custom_endpoint'] = esc_url_raw( trim( $input['custom_endpoint'] ?? '' ) );
-        $clean['language']        = sanitize_key( $input['language'] ?? 'en' );
-        $clean['auto_title']      = ! empty( $input['auto_title'] ) ? 1 : 0;
-        $clean['brand_context']   = sanitize_text_field( $input['brand_context'] ?? '' );
+        $clean['model']              = $model;
+        $clean['custom_endpoint']    = esc_url_raw( trim( $input['custom_endpoint'] ?? '' ) );
+        $clean['language']           = sanitize_key( $input['language'] ?? 'en' );
+        $clean['generate_alt']       = ! empty( $input['generate_alt'] ) ? 1 : 0;
+        $clean['generate_caption']   = ! empty( $input['generate_caption'] ) ? 1 : 0;
+        $clean['generate_title']     = ! empty( $input['generate_title'] ) ? 1 : ( ! empty( $input['auto_title'] ) ? 1 : 0 );
+        $clean['generate_desc']      = ! empty( $input['generate_desc'] ) ? 1 : 0;
+        $clean['overwrite_existing'] = ! empty( $input['overwrite_existing'] ) ? 1 : 0;
+        $clean['brand_context']      = sanitize_text_field( $input['brand_context'] ?? '' );
         return $clean;
     }
 
@@ -178,11 +186,51 @@ class WPFH_AAT_Admin {
             ] );
         }
 
-        // Custom prompt incorporating user's brand context and language
+        // Determine which fields user wants generated
+        $enabled_fields = [];
+        if ( ! empty( $settings['generate_alt'] ) ) {
+            $enabled_fields[] = 'alt_text';
+        }
+        if ( ! empty( $settings['generate_title'] ) ) {
+            $enabled_fields[] = 'title';
+        }
+        if ( ! empty( $settings['generate_caption'] ) ) {
+            $enabled_fields[] = 'caption';
+        }
+        if ( ! empty( $settings['generate_desc'] ) ) {
+            $enabled_fields[] = 'description';
+        }
+
+        // Fallback: if user unchecked all, default to alt_text
+        if ( empty( $enabled_fields ) ) {
+            $enabled_fields = [ 'alt_text' ];
+        }
+
+        $instructions = [];
+        $json_keys    = [];
+        if ( in_array( 'alt_text', $enabled_fields, true ) ) {
+            $instructions[] = 'accurate, concise WCAG-compliant alt text (maximum 125 characters)';
+            $json_keys[]    = '"alt_text": "..."';
+        }
+        if ( in_array( 'title', $enabled_fields, true ) ) {
+            $instructions[] = 'a clean human-readable image title';
+            $json_keys[]    = '"title": "..."';
+        }
+        if ( in_array( 'caption', $enabled_fields, true ) ) {
+            $instructions[] = 'a short editorial caption for readers';
+            $json_keys[]    = '"caption": "..."';
+        }
+        if ( in_array( 'description', $enabled_fields, true ) ) {
+            $instructions[] = 'a detailed description explaining visual elements and context';
+            $json_keys[]    = '"description": "..."';
+        }
+
         $prompt = sprintf(
-            'Analyze this image and generate an accurate, concise, WCAG-compliant alt text (under 125 characters) and a short title. Language: %s. Brand context: %s. Return valid JSON only: {"alt_text": "...", "title": "..."}',
+            'Analyze this image and generate: %s. Output language: %s. Brand context: %s. Return valid JSON only in this format: {%s}',
+            implode( ', ', $instructions ),
             esc_html( $settings['language'] ),
-            esc_html( $settings['brand_context'] )
+            esc_html( $settings['brand_context'] ),
+            implode( ', ', $json_keys )
         );
 
         $result = WPFH_AI_Client::analyze_image( $settings, $file_path, $prompt, $settings['language'] );
@@ -191,25 +239,78 @@ class WPFH_AAT_Admin {
             wp_send_json_error( [ 'message' => $result['error'] ] );
         }
 
-        $alt_text = sanitize_text_field( $result['data']['alt_text'] ?? '' );
-        $title    = sanitize_text_field( $result['data']['title'] ?? '' );
+        $data      = $result['data'] ?? [];
+        $overwrite = ! empty( $settings['overwrite_existing'] );
 
-        // Save alt text to WordPress attachment meta
-        update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
+        // Current attachment metadata
+        $current_post = get_post( $attachment_id );
+        $current_alt  = get_post_meta( $attachment_id, '_wp_attachment_image_alt', true );
 
-        // Optionally update post title if setting enabled
-        if ( ! empty( $settings['auto_title'] ) && ! empty( $title ) ) {
-            wp_update_post( [
-                'ID'         => $attachment_id,
-                'post_title' => $title,
-            ] );
+        $post_updates = [];
+        $response_data = [
+            'alt_text'    => '',
+            'title'       => '',
+            'caption'     => '',
+            'description' => '',
+            'updated'     => [],
+        ];
+
+        // 1. Alt Text
+        if ( in_array( 'alt_text', $enabled_fields, true ) && ! empty( $data['alt_text'] ) ) {
+            $new_alt = sanitize_text_field( $data['alt_text'] );
+            if ( $overwrite || empty( trim( $current_alt ) ) ) {
+                update_post_meta( $attachment_id, '_wp_attachment_image_alt', $new_alt );
+                $response_data['alt_text'] = $new_alt;
+                $response_data['updated'][] = 'alt';
+            } else {
+                $response_data['alt_text'] = $current_alt;
+            }
         }
 
-        wp_send_json_success( [
-            'alt_text' => $alt_text,
-            'title'    => $title,
-            'message'  => __( 'Success!', 'wpfh-ai-alt-text' ),
-        ] );
+        // 2. Title
+        if ( in_array( 'title', $enabled_fields, true ) && ! empty( $data['title'] ) ) {
+            $new_title = sanitize_text_field( $data['title'] );
+            if ( $overwrite || empty( trim( $current_post->post_title ) ) ) {
+                $post_updates['post_title'] = $new_title;
+                $response_data['title'] = $new_title;
+                $response_data['updated'][] = 'title';
+            } else {
+                $response_data['title'] = $current_post->post_title;
+            }
+        }
+
+        // 3. Caption (post_excerpt)
+        if ( in_array( 'caption', $enabled_fields, true ) && ! empty( $data['caption'] ) ) {
+            $new_caption = sanitize_text_field( $data['caption'] );
+            if ( $overwrite || empty( trim( $current_post->post_excerpt ) ) ) {
+                $post_updates['post_excerpt'] = $new_caption;
+                $response_data['caption'] = $new_caption;
+                $response_data['updated'][] = 'caption';
+            } else {
+                $response_data['caption'] = $current_post->post_excerpt;
+            }
+        }
+
+        // 4. Description (post_content)
+        if ( in_array( 'description', $enabled_fields, true ) && ! empty( $data['description'] ) ) {
+            $new_desc = sanitize_textarea_field( $data['description'] );
+            if ( $overwrite || empty( trim( $current_post->post_content ) ) ) {
+                $post_updates['post_content'] = $new_desc;
+                $response_data['description'] = $new_desc;
+                $response_data['updated'][] = 'description';
+            } else {
+                $response_data['description'] = $current_post->post_content;
+            }
+        }
+
+        // Save post fields if any
+        if ( ! empty( $post_updates ) ) {
+            $post_updates['ID'] = $attachment_id;
+            wp_update_post( $post_updates );
+        }
+
+        $response_data['message'] = __( 'Metadata generated and saved successfully!', 'wpfh-ai-alt-text' );
+        wp_send_json_success( $response_data );
     }
 
     /**
@@ -263,29 +364,43 @@ class WPFH_AAT_Admin {
                             </tr>
 
                             <tr>
-                                <th scope="row"><label for="wpfh_model"><?php esc_html_e( 'Model Selection', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <th scope="row"><label for="wpfh_model_select"><?php esc_html_e( 'Model Selection', 'wpfh-ai-alt-text' ); ?></label></th>
                                 <td>
                                     <?php
                                     $current_provider = $settings['provider'] ?? 'gemini';
                                     $current_models   = $providers[ $current_provider ]['models'] ?? [];
-                                    $is_custom        = 'custom' === $current_provider;
+                                    $saved_model      = $settings['model'] ?? '';
+                                    $is_preset        = array_key_exists( $saved_model, $current_models );
+                                    $is_custom_prov   = 'custom' === $current_provider;
+                                    $show_manual      = $is_custom_prov || ( ! empty( $saved_model ) && ! $is_preset );
                                     ?>
-                                    <select name="wpfh_aat_settings[model]" id="wpfh_model" class="regular-text" style="<?php echo $is_custom ? 'display:none;' : ''; ?>">
-                                        <?php if ( ! empty( $current_models ) ) : ?>
-                                            <?php foreach ( $current_models as $m_key => $m_label ) : ?>
-                                                <option value="<?php echo esc_attr( $m_key ); ?>" <?php selected( $settings['model'], $m_key ); ?>>
-                                                    <?php echo esc_html( $m_label ); ?>
+                                    <div class="wpfh-model-field-wrap">
+                                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                                            <select id="wpfh_model_select" class="regular-text" style="<?php echo $is_custom_prov ? 'display:none;' : 'max-width:380px;'; ?>">
+                                                <?php foreach ( $current_models as $m_key => $m_label ) : ?>
+                                                    <option value="<?php echo esc_attr( $m_key ); ?>" <?php selected( $saved_model, $m_key ); ?>>
+                                                        <?php echo esc_html( $m_label ); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                                <option value="__custom__" <?php selected( ! $is_preset && ! $is_custom_prov, true ); ?>>
+                                                    <?php esc_html_e( '✏️ Custom Model (Type manually...)', 'wpfh-ai-alt-text' ); ?>
                                                 </option>
-                                            <?php endforeach; ?>
-                                        <?php else : ?>
-                                            <option value="<?php echo esc_attr( $settings['model'] ); ?>" selected="selected">
-                                                <?php echo esc_html( $settings['model'] ?: 'Default Model' ); ?>
-                                            </option>
-                                        <?php endif; ?>
-                                    </select>
-                                    <input name="wpfh_aat_settings[custom_model]" type="text" id="wpfh_custom_model" value="<?php echo esc_attr( $settings['model'] ); ?>" class="regular-text" style="<?php echo $is_custom ? '' : 'display:none;'; ?>" placeholder="e.g. llama-3.3-70b-versatile or custom-model" />
+                                            </select>
+
+                                            <button type="button" id="wpfh_toggle_manual_model" class="button button-secondary" style="<?php echo $is_custom_prov ? 'display:none;' : ''; ?>">
+                                                <?php echo $show_manual ? esc_html__( '📋 Choose from List', 'wpfh-ai-alt-text' ) : esc_html__( '✏️ Type Manually', 'wpfh-ai-alt-text' ); ?>
+                                            </button>
+                                        </div>
+
+                                        <div id="wpfh_manual_model_wrap" style="<?php echo $show_manual ? 'margin-top:8px;' : 'display:none;margin-top:8px;'; ?>">
+                                            <input name="wpfh_aat_settings[model]" type="text" id="wpfh_model_input" value="<?php echo esc_attr( $saved_model ); ?>" class="regular-text" placeholder="e.g. deepseek-flash, gemini-1.5-flash, llama-3.3-70b" />
+                                            <p class="description" style="margin-top:4px;">
+                                                <?php esc_html_e( 'Enter any model identifier or fine-tune supported by your chosen provider.', 'wpfh-ai-alt-text' ); ?>
+                                            </p>
+                                        </div>
+                                    </div>
                                     <p class="description" id="wpfh_model_help">
-                                        <?php esc_html_e( 'Flash models are ultra-fast and free/cheap; Pro/Flagship models provide maximum deep vision reasoning.', 'wpfh-ai-alt-text' ); ?>
+                                        <?php esc_html_e( 'Flash models are ultra-fast and cost-effective; Pro models provide maximum reasoning depth.', 'wpfh-ai-alt-text' ); ?>
                                     </p>
                                 </td>
                             </tr>
@@ -313,12 +428,56 @@ class WPFH_AAT_Admin {
                             </tr>
 
                             <tr>
-                                <th scope="row"><?php esc_html_e( 'Auto Update Title', 'wpfh-ai-alt-text' ); ?></th>
+                                <th scope="row"><?php esc_html_e( 'Fields to Generate', 'wpfh-ai-alt-text' ); ?></th>
                                 <td>
-                                    <label for="wpfh_auto_title">
-                                        <input name="wpfh_aat_settings[auto_title]" type="checkbox" id="wpfh_auto_title" value="1" <?php checked( $settings['auto_title'], 1 ); ?> />
-                                        <?php esc_html_e( 'Also update media title alongside the alt-text.', 'wpfh-ai-alt-text' ); ?>
+                                    <fieldset>
+                                        <legend class="screen-reader-text"><span><?php esc_html_e( 'Fields to Generate', 'wpfh-ai-alt-text' ); ?></span></legend>
+                                        
+                                        <label for="wpfh_generate_alt" style="display:block;margin-bottom:8px;">
+                                            <input name="wpfh_aat_settings[generate_alt]" type="checkbox" id="wpfh_generate_alt" value="1" <?php checked( $settings['generate_alt'], 1 ); ?> />
+                                            <strong><?php esc_html_e( 'Alternative Text (Alt Text)', 'wpfh-ai-alt-text' ); ?></strong>
+                                            <span class="description" style="display:block;margin-left:24px;color:#64748b;">
+                                                <?php esc_html_e( 'Essential for web accessibility (WCAG 2.1) and Google Image Search SEO ranking.', 'wpfh-ai-alt-text' ); ?>
+                                            </span>
+                                        </label>
+
+                                        <label for="wpfh_generate_title" style="display:block;margin-bottom:8px;">
+                                            <input name="wpfh_aat_settings[generate_title]" type="checkbox" id="wpfh_generate_title" value="1" <?php checked( $settings['generate_title'], 1 ); ?> />
+                                            <strong><?php esc_html_e( 'Image Title', 'wpfh-ai-alt-text' ); ?></strong>
+                                            <span class="description" style="display:block;margin-left:24px;color:#64748b;">
+                                                <?php esc_html_e( 'Clean, readable image title replacing camera raw names (e.g. IMG_4092.jpg).', 'wpfh-ai-alt-text' ); ?>
+                                            </span>
+                                        </label>
+
+                                        <label for="wpfh_generate_caption" style="display:block;margin-bottom:8px;">
+                                            <input name="wpfh_aat_settings[generate_caption]" type="checkbox" id="wpfh_generate_caption" value="1" <?php checked( $settings['generate_caption'], 1 ); ?> />
+                                            <strong><?php esc_html_e( 'Caption', 'wpfh-ai-alt-text' ); ?></strong>
+                                            <span class="description" style="display:block;margin-left:24px;color:#64748b;">
+                                                <?php esc_html_e( 'Short editorial caption displayed below images in blog posts.', 'wpfh-ai-alt-text' ); ?>
+                                            </span>
+                                        </label>
+
+                                        <label for="wpfh_generate_desc" style="display:block;">
+                                            <input name="wpfh_aat_settings[generate_desc]" type="checkbox" id="wpfh_generate_desc" value="1" <?php checked( $settings['generate_desc'], 1 ); ?> />
+                                            <strong><?php esc_html_e( 'Description', 'wpfh-ai-alt-text' ); ?></strong>
+                                            <span class="description" style="display:block;margin-left:24px;color:#64748b;">
+                                                <?php esc_html_e( 'Detailed visual explanation saved in attachment content for rich context.', 'wpfh-ai-alt-text' ); ?>
+                                            </span>
+                                        </label>
+                                    </fieldset>
+                                </td>
+                            </tr>
+
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Overwrite Policy', 'wpfh-ai-alt-text' ); ?></th>
+                                <td>
+                                    <label for="wpfh_overwrite_existing">
+                                        <input name="wpfh_aat_settings[overwrite_existing]" type="checkbox" id="wpfh_overwrite_existing" value="1" <?php checked( $settings['overwrite_existing'], 1 ); ?> />
+                                        <strong><?php esc_html_e( 'Overwrite existing values', 'wpfh-ai-alt-text' ); ?></strong>
                                     </label>
+                                    <p class="description">
+                                        <?php esc_html_e( 'When unchecked, any field that already contains text (e.g. a manual caption or custom title) is preserved and never overwritten.', 'wpfh-ai-alt-text' ); ?>
+                                    </p>
                                 </td>
                             </tr>
                         </table>
@@ -346,16 +505,16 @@ class WPFH_AAT_Admin {
                             </li>
                             <li>
                                 <strong>4. <?php esc_html_e( 'Auto-Saves Instantly:', 'wpfh-ai-alt-text' ); ?></strong>
-                                <span><?php esc_html_e( 'The AI inspects your image, drafts WCAG-compliant descriptive alt text and SEO title, and saves it to WordPress metadata automatically.', 'wpfh-ai-alt-text' ); ?></span>
+                                <span><?php esc_html_e( 'The AI inspects your image, generates your chosen fields (Alt-Text, Title, Caption, or Description), and saves them to WordPress metadata immediately.', 'wpfh-ai-alt-text' ); ?></span>
                             </li>
                         </ol>
 
                         <div class="wpfh-aat-help-links">
                             <h4>🔑 <?php esc_html_e( 'Get Free / Direct API Keys:', 'wpfh-ai-alt-text' ); ?></h4>
                             <ul>
-                                <li><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio &rarr;</a> (Gemini 1.5 Flash has a generous free tier)</li>
+                                <li><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio &rarr;</a> (Gemini 1.5 Flash has a free tier)</li>
+                                <li><a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">DeepSeek Platform &rarr;</a> (DeepSeek Flash Vision & V4 Pro)</li>
                                 <li><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI Platform &rarr;</a> (GPT-4o Mini)</li>
-                                <li><a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">DeepSeek Platform &rarr;</a> (DeepSeek-V3)</li>
                                 <li><a href="https://console.anthropic.com/" target="_blank" rel="noopener">Anthropic Console &rarr;</a> (Claude 3.5 Sonnet)</li>
                             </ul>
                         </div>

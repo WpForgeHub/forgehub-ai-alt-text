@@ -180,3 +180,12 @@
     padding: 30px;
     margin-top: 20px;
 }
+
+.wpfh-model-field-wrap {
+    max-width: 540px;
+}
+
+#wpfh_toggle_manual_model {
+    cursor: pointer;
+    vertical-align: middle;
+}
