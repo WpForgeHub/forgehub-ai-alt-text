@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/WpForgeHub/wpfh-ai-alt-text/releases/latest/download/wpfh-ai-alt-text-1.0.1-free.zip">
-    <img src="https://img.shields.io/badge/📥_Download_Free_ZIP-v1.0.1-2563eb?style=for-the-badge&logo=wordpress&logoColor=white" alt="Download Free ZIP" />
+  <a href="https://github.com/WpForgeHub/wpfh-ai-alt-text/releases/latest/download/wpfh-ai-alt-text-1.1.0-free.zip">
+    <img src="https://img.shields.io/badge/📥_Download_Free_ZIP-v1.1.0-2563eb?style=for-the-badge&logo=wordpress&logoColor=white" alt="Download Free ZIP" />
   </a>
   <a href="https://wpforgehub.com/plugins/ai-alt-text/">
     <img src="https://img.shields.io/badge/🌐_Plugin_Homepage-WPForgeHub-0f172a?style=for-the-badge" alt="WPForgeHub Plugin Page" />
