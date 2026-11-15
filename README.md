@@ -38,7 +38,7 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 
 ## 🚀 Free vs. PRO Feature Matrix
 
-| Feature | FREE (WordPress.org) | PRO ($3.99/mo or $19/yr) |
+| Feature | FREE (Community) | PRO |
 | :--- | :---: | :---: |
 | **Media Library 1-Click Alt-Text** | ✅ | ✅ |
 | **All 6 AI Providers (BYOK)** | ✅ | ✅ |
@@ -50,7 +50,17 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 | **WooCommerce Context (Title, SKU, Category)** | ❌ | **✅ Deep SEO** |
 | **Priority Developer Support** | ❌ | **✅ Included** |
 
-👉 **[Upgrade to PRO on WPForgeHub](https://wpforgehub.com/#products)** to unlock automated bulk scanning and instant upload generation!
+---
+
+## 💎 PRO Pricing & Licensing
+
+| Plan Tier | Monthly | Annual (Best Value) | Lifetime | Ideal For |
+| :--- | :--- | :--- | :--- | :--- |
+| **Single Site (1 Site)** | $3.99 / mo | **$19 / yr** | $39 *(One-time)* | Individual blog or business site |
+| **5 Sites** | $7.99 / mo | **$39 / yr** | $79 *(One-time)* | Freelancers & web developers |
+| **Unlimited Sites** | $12.99 / mo | **$69 / yr** | $129 *(One-time)* | Agencies & multi-site networks |
+
+👉 **[Get PRO on WPForgeHub](https://wpforgehub.com/#products)** — Instant license delivery, automatic updates, and 100% money-back guarantee.
 
 ---
 
