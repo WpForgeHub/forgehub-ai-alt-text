@@ -257,7 +257,17 @@
                 },
                 error: function(xhr, status, error) {
                     $btn.prop('disabled', false);
-                    $status.removeClass('is-loading').addClass('is-error').text(wpfhAatData.i18n.error + ' (' + error + ')');
+                    var detail = '';
+                    if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                        detail = xhr.responseJSON.data.message;
+                    } else if (xhr.responseText && xhr.responseText.length < 200) {
+                        detail = xhr.responseText;
+                    } else if (error) {
+                        detail = error;
+                    } else {
+                        detail = 'HTTP ' + xhr.status;
+                    }
+                    $status.removeClass('is-loading').addClass('is-error').html(wpfhAatData.i18n.error + ' (' + detail + ')');
                 }
             });
         });
