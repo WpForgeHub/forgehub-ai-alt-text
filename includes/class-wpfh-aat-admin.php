@@ -65,7 +65,12 @@ class WPFH_AAT_Admin {
         $clean = [];
         $clean['provider']        = sanitize_key( $input['provider'] ?? 'gemini' );
         $clean['api_key']         = trim( sanitize_text_field( $input['api_key'] ?? '' ) );
-        $clean['model']           = sanitize_text_field( $input['model'] ?? '' );
+        
+        $model = sanitize_text_field( $input['model'] ?? '' );
+        if ( 'custom' === $clean['provider'] && ! empty( $input['custom_model'] ) ) {
+            $model = sanitize_text_field( $input['custom_model'] );
+        }
+        $clean['model']           = $model;
         $clean['custom_endpoint'] = esc_url_raw( trim( $input['custom_endpoint'] ?? '' ) );
         $clean['language']        = sanitize_key( $input['language'] ?? 'en' );
         $clean['auto_title']      = ! empty( $input['auto_title'] ) ? 1 : 0;
@@ -98,10 +103,15 @@ class WPFH_AAT_Admin {
             true
         );
 
+        $settings = self::get_settings();
+
         wp_localize_script( 'wpfh-aat-admin-js', 'wpfhAatData', [
-            'ajax_url' => admin_url( 'admin-ajax.php' ),
-            'nonce'    => wp_create_nonce( 'wpfh_aat_nonce' ),
-            'i18n'     => [
+            'ajax_url'         => admin_url( 'admin-ajax.php' ),
+            'nonce'            => wp_create_nonce( 'wpfh_aat_nonce' ),
+            'providers'        => WPFH_AI_Client::get_providers(),
+            'current_provider' => $settings['provider'],
+            'current_model'    => $settings['model'],
+            'i18n'             => [
                 'generating' => __( 'Analyzing image...', 'wpfh-ai-alt-text' ),
                 'success'    => __( 'Alt-Text generated!', 'wpfh-ai-alt-text' ),
                 'error'      => __( 'Failed to generate.', 'wpfh-ai-alt-text' ),
@@ -215,83 +225,147 @@ class WPFH_AAT_Admin {
                 <?php esc_html_e( 'Zero server bloat, 100% private BYOK (Bring Your Own Key) architecture. Your images are sent directly to your chosen AI provider without intermediary servers.', 'wpfh-ai-alt-text' ); ?>
             </p>
 
-            <form method="post" action="options.php" class="wpfh-aat-form">
-                <?php
-                settings_fields( 'wpfh_aat_options_group' );
-                ?>
-                <table class="form-table" role="presentation">
-                    <tr>
-                        <th scope="row"><label for="wpfh_provider"><?php esc_html_e( 'AI Provider', 'wpfh-ai-alt-text' ); ?></label></th>
-                        <td>
-                            <select name="wpfh_aat_settings[provider]" id="wpfh_provider" class="regular-text">
-                                <?php foreach ( $providers as $key => $prov ) : ?>
-                                    <option value="<?php echo esc_attr( $key ); ?>" <?php selected( $settings['provider'], $key ); ?>>
-                                        <?php echo esc_html( $prov['label'] ); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </td>
-                    </tr>
+            <div class="wpfh-aat-settings-grid">
+                <!-- Left Column: Settings Form -->
+                <div class="wpfh-aat-main-col">
+                    <form method="post" action="options.php" class="wpfh-aat-form">
+                        <?php
+                        settings_fields( 'wpfh_aat_options_group' );
+                        ?>
+                        <table class="form-table" role="presentation">
+                            <tr>
+                                <th scope="row"><label for="wpfh_provider"><?php esc_html_e( 'AI Provider', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <td>
+                                    <select name="wpfh_aat_settings[provider]" id="wpfh_provider" class="regular-text">
+                                        <?php foreach ( $providers as $key => $prov ) : ?>
+                                            <option value="<?php echo esc_attr( $key ); ?>" <?php selected( $settings['provider'], $key ); ?>>
+                                                <?php echo esc_html( $prov['label'] ); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
 
-                    <tr>
-                        <th scope="row"><label for="wpfh_api_key"><?php esc_html_e( 'API Key', 'wpfh-ai-alt-text' ); ?></label></th>
-                        <td>
-                            <input name="wpfh_aat_settings[api_key]" type="password" id="wpfh_api_key" value="<?php echo esc_attr( $settings['api_key'] ); ?>" class="regular-text" placeholder="sk-... or AIzaSy..." />
-                            <p class="description"><?php esc_html_e( 'Your private API key. Stored securely in your WordPress database.', 'wpfh-ai-alt-text' ); ?></p>
-                        </td>
-                    </tr>
+                            <tr>
+                                <th scope="row"><label for="wpfh_api_key"><?php esc_html_e( 'API Key', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <td>
+                                    <input name="wpfh_aat_settings[api_key]" type="password" id="wpfh_api_key" value="<?php echo esc_attr( $settings['api_key'] ); ?>" class="regular-text" placeholder="sk-... or AIzaSy..." />
+                                    <p class="description"><?php esc_html_e( 'Your private API key. Stored securely in your WordPress database.', 'wpfh-ai-alt-text' ); ?></p>
+                                </td>
+                            </tr>
 
-                    <tr id="wpfh_custom_endpoint_row" style="<?php echo 'custom' === $settings['provider'] ? '' : 'display:none;'; ?>">
-                        <th scope="row"><label for="wpfh_custom_endpoint"><?php esc_html_e( 'Custom Base URL', 'wpfh-ai-alt-text' ); ?></label></th>
-                        <td>
-                            <input name="wpfh_aat_settings[custom_endpoint]" type="url" id="wpfh_custom_endpoint" value="<?php echo esc_attr( $settings['custom_endpoint'] ); ?>" class="regular-text" placeholder="http://localhost:11434/v1" />
-                            <p class="description"><?php esc_html_e( 'OpenAI-compatible endpoint URL for local Ollama, Groq, vLLM, etc.', 'wpfh-ai-alt-text' ); ?></p>
-                        </td>
-                    </tr>
+                            <tr id="wpfh_custom_endpoint_row" style="<?php echo 'custom' === $settings['provider'] ? '' : 'display:none;'; ?>">
+                                <th scope="row"><label for="wpfh_custom_endpoint"><?php esc_html_e( 'Custom Base URL', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <td>
+                                    <input name="wpfh_aat_settings[custom_endpoint]" type="url" id="wpfh_custom_endpoint" value="<?php echo esc_attr( $settings['custom_endpoint'] ); ?>" class="regular-text" placeholder="http://localhost:11434/v1" />
+                                    <p class="description"><?php esc_html_e( 'OpenAI-compatible endpoint URL for local Ollama, Groq, vLLM, etc.', 'wpfh-ai-alt-text' ); ?></p>
+                                </td>
+                            </tr>
 
-                    <tr>
-                        <th scope="row"><label for="wpfh_model"><?php esc_html_e( 'Model Name', 'wpfh-ai-alt-text' ); ?></label></th>
-                        <td>
-                            <input name="wpfh_aat_settings[model]" type="text" id="wpfh_model" value="<?php echo esc_attr( $settings['model'] ); ?>" class="regular-text" placeholder="gemini-1.5-flash / gpt-4o-mini" />
-                            <p class="description"><?php esc_html_e( 'Leave blank to use the recommended default vision model.', 'wpfh-ai-alt-text' ); ?></p>
-                        </td>
-                    </tr>
+                            <tr>
+                                <th scope="row"><label for="wpfh_model"><?php esc_html_e( 'Model Selection', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <td>
+                                    <?php
+                                    $current_provider = $settings['provider'] ?? 'gemini';
+                                    $current_models   = $providers[ $current_provider ]['models'] ?? [];
+                                    $is_custom        = 'custom' === $current_provider;
+                                    ?>
+                                    <select name="wpfh_aat_settings[model]" id="wpfh_model" class="regular-text" style="<?php echo $is_custom ? 'display:none;' : ''; ?>">
+                                        <?php if ( ! empty( $current_models ) ) : ?>
+                                            <?php foreach ( $current_models as $m_key => $m_label ) : ?>
+                                                <option value="<?php echo esc_attr( $m_key ); ?>" <?php selected( $settings['model'], $m_key ); ?>>
+                                                    <?php echo esc_html( $m_label ); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        <?php else : ?>
+                                            <option value="<?php echo esc_attr( $settings['model'] ); ?>" selected="selected">
+                                                <?php echo esc_html( $settings['model'] ?: 'Default Model' ); ?>
+                                            </option>
+                                        <?php endif; ?>
+                                    </select>
+                                    <input name="wpfh_aat_settings[custom_model]" type="text" id="wpfh_custom_model" value="<?php echo esc_attr( $settings['model'] ); ?>" class="regular-text" style="<?php echo $is_custom ? '' : 'display:none;'; ?>" placeholder="e.g. llama-3.3-70b-versatile or custom-model" />
+                                    <p class="description" id="wpfh_model_help">
+                                        <?php esc_html_e( 'Flash models are ultra-fast and free/cheap; Pro/Flagship models provide maximum deep vision reasoning.', 'wpfh-ai-alt-text' ); ?>
+                                    </p>
+                                </td>
+                            </tr>
 
-                    <tr>
-                        <th scope="row"><label for="wpfh_language"><?php esc_html_e( 'Output Language', 'wpfh-ai-alt-text' ); ?></label></th>
-                        <td>
-                            <select name="wpfh_aat_settings[language]" id="wpfh_language">
-                                <option value="en" <?php selected( $settings['language'], 'en' ); ?>>English</option>
-                                <option value="tr" <?php selected( $settings['language'], 'tr' ); ?>>Türkçe</option>
-                                <option value="de" <?php selected( $settings['language'], 'de' ); ?>>Deutsch</option>
-                                <option value="es" <?php selected( $settings['language'], 'es' ); ?>>Español</option>
-                                <option value="fr" <?php selected( $settings['language'], 'fr' ); ?>>Français</option>
-                                <option value="it" <?php selected( $settings['language'], 'it' ); ?>>Italiano</option>
-                            </select>
-                        </td>
-                    </tr>
+                            <tr>
+                                <th scope="row"><label for="wpfh_language"><?php esc_html_e( 'Output Language', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <td>
+                                    <select name="wpfh_aat_settings[language]" id="wpfh_language">
+                                        <option value="en" <?php selected( $settings['language'], 'en' ); ?>>English</option>
+                                        <option value="tr" <?php selected( $settings['language'], 'tr' ); ?>>Türkçe</option>
+                                        <option value="de" <?php selected( $settings['language'], 'de' ); ?>>Deutsch</option>
+                                        <option value="es" <?php selected( $settings['language'], 'es' ); ?>>Español</option>
+                                        <option value="fr" <?php selected( $settings['language'], 'fr' ); ?>>Français</option>
+                                        <option value="it" <?php selected( $settings['language'], 'it' ); ?>>Italiano</option>
+                                    </select>
+                                </td>
+                            </tr>
 
-                    <tr>
-                        <th scope="row"><label for="wpfh_brand_context"><?php esc_html_e( 'Brand / Niche Context', 'wpfh-ai-alt-text' ); ?></label></th>
-                        <td>
-                            <input name="wpfh_aat_settings[brand_context]" type="text" id="wpfh_brand_context" value="<?php echo esc_attr( $settings['brand_context'] ); ?>" class="large-text" placeholder="<?php esc_attr_e( 'e.g. Handmade leather goods store, tech blog, medical clinic...', 'wpfh-ai-alt-text' ); ?>" />
-                            <p class="description"><?php esc_html_e( 'Guides the AI to use relevant domain keywords and tone.', 'wpfh-ai-alt-text' ); ?></p>
-                        </td>
-                    </tr>
+                            <tr>
+                                <th scope="row"><label for="wpfh_brand_context"><?php esc_html_e( 'Brand / Niche Context', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <td>
+                                    <input name="wpfh_aat_settings[brand_context]" type="text" id="wpfh_brand_context" value="<?php echo esc_attr( $settings['brand_context'] ); ?>" class="large-text" placeholder="<?php esc_attr_e( 'e.g. Handmade leather goods store, tech blog, medical clinic...', 'wpfh-ai-alt-text' ); ?>" />
+                                    <p class="description"><?php esc_html_e( 'Guides the AI to use relevant domain keywords and tone.', 'wpfh-ai-alt-text' ); ?></p>
+                                </td>
+                            </tr>
 
-                    <tr>
-                        <th scope="row"><?php esc_html_e( 'Auto Update Title', 'wpfh-ai-alt-text' ); ?></th>
-                        <td>
-                            <label for="wpfh_auto_title">
-                                <input name="wpfh_aat_settings[auto_title]" type="checkbox" id="wpfh_auto_title" value="1" <?php checked( $settings['auto_title'], 1 ); ?> />
-                                <?php esc_html_e( 'Also update media title alongside the alt-text.', 'wpfh-ai-alt-text' ); ?>
-                            </label>
-                        </td>
-                    </tr>
-                </table>
+                            <tr>
+                                <th scope="row"><?php esc_html_e( 'Auto Update Title', 'wpfh-ai-alt-text' ); ?></th>
+                                <td>
+                                    <label for="wpfh_auto_title">
+                                        <input name="wpfh_aat_settings[auto_title]" type="checkbox" id="wpfh_auto_title" value="1" <?php checked( $settings['auto_title'], 1 ); ?> />
+                                        <?php esc_html_e( 'Also update media title alongside the alt-text.', 'wpfh-ai-alt-text' ); ?>
+                                    </label>
+                                </td>
+                            </tr>
+                        </table>
 
-                <?php submit_button(); ?>
-            </form>
+                        <?php submit_button(); ?>
+                    </form>
+                </div>
+
+                <!-- Right Column: Quick Start Help Box -->
+                <div class="wpfh-aat-sidebar-col">
+                    <div class="wpfh-aat-help-box">
+                        <h3>📖 <?php esc_html_e( 'How to Use This Plugin', 'wpfh-ai-alt-text' ); ?></h3>
+                        <ol class="wpfh-aat-steps">
+                            <li>
+                                <strong>1. <?php esc_html_e( 'Save Your API Key:', 'wpfh-ai-alt-text' ); ?></strong>
+                                <span><?php esc_html_e( 'Select your AI provider on the left, paste your API key, choose your preferred model, and click "Save Changes".', 'wpfh-ai-alt-text' ); ?></span>
+                            </li>
+                            <li>
+                                <strong>2. <?php esc_html_e( 'Go to Media Library:', 'wpfh-ai-alt-text' ); ?></strong>
+                                <span><?php printf( esc_html__( 'Open %s in your admin sidebar.', 'wpfh-ai-alt-text' ), '<a href="' . esc_url( admin_url( 'upload.php' ) ) . '"><strong>Media &rarr; Library</strong></a>' ); ?></span>
+                            </li>
+                            <li>
+                                <strong>3. <?php esc_html_e( 'Click Any Image:', 'wpfh-ai-alt-text' ); ?></strong>
+                                <span><?php esc_html_e( 'Click on any photo. In the attachment details panel on the right, you will see the new button:', 'wpfh-ai-alt-text' ); ?><br><code style="display:inline-block;margin-top:4px;padding:2px 8px;background:#e2e8f0;color:#0f172a;border-radius:4px;font-size:12px;">⚡ Generate with AI</code></span>
+                            </li>
+                            <li>
+                                <strong>4. <?php esc_html_e( 'Auto-Saves Instantly:', 'wpfh-ai-alt-text' ); ?></strong>
+                                <span><?php esc_html_e( 'The AI inspects your image, drafts WCAG-compliant descriptive alt text and SEO title, and saves it to WordPress metadata automatically.', 'wpfh-ai-alt-text' ); ?></span>
+                            </li>
+                        </ol>
+
+                        <div class="wpfh-aat-help-links">
+                            <h4>🔑 <?php esc_html_e( 'Get Free / Direct API Keys:', 'wpfh-ai-alt-text' ); ?></h4>
+                            <ul>
+                                <li><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio &rarr;</a> (Gemini 1.5 Flash has a generous free tier)</li>
+                                <li><a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI Platform &rarr;</a> (GPT-4o Mini)</li>
+                                <li><a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">DeepSeek Platform &rarr;</a> (DeepSeek-V3)</li>
+                                <li><a href="https://console.anthropic.com/" target="_blank" rel="noopener">Anthropic Console &rarr;</a> (Claude 3.5 Sonnet)</li>
+                            </ul>
+                        </div>
+
+                        <div class="wpfh-aat-help-tip">
+                            💡 <strong><?php esc_html_e( 'Pro Tip:', 'wpfh-ai-alt-text' ); ?></strong> <?php esc_html_e( 'Enter your "Brand / Niche Context" on the left (e.g. "Handmade leather bags store") so the AI weaves your domain keywords into every alt description naturally.', 'wpfh-ai-alt-text' ); ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <hr style="margin-top:40px;border:0;border-top:1px solid #ccd0d4;" />
 

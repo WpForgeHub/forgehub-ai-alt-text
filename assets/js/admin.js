@@ -6,31 +6,59 @@
 
     $(document).ready(function() {
 
-        // Settings Page: Dynamic Provider Toggle
+        // Settings Page: Dynamic Provider & Model Switcher
         var $providerSelect = $('#wpfh_provider');
         var $customRow      = $('#wpfh_custom_endpoint_row');
-        var $modelInput     = $('#wpfh_model');
+        var $modelSelect    = $('#wpfh_model');
+        var $customModel    = $('#wpfh_custom_model');
+        var providersData   = (typeof wpfhAatData !== 'undefined' && wpfhAatData.providers) ? wpfhAatData.providers : {};
+
+        function updateModelDropdown(providerKey, selectedModel) {
+            var prov = providersData[providerKey];
+            if (!prov) {
+                return;
+            }
+
+            if (providerKey === 'custom') {
+                $customRow.show();
+                $modelSelect.hide();
+                $customModel.show();
+                if (selectedModel) {
+                    $customModel.val(selectedModel);
+                }
+                return;
+            }
+
+            $customRow.hide();
+            $customModel.hide();
+            $modelSelect.show().empty();
+
+            var models = prov.models || {};
+            var keys   = Object.keys(models);
+
+            if (keys.length > 0) {
+                var defaultToSelect = selectedModel;
+                if (!defaultToSelect || !models[defaultToSelect]) {
+                    defaultToSelect = prov.default_model || keys[0];
+                }
+
+                $.each(models, function(val, label) {
+                    var $opt = $('<option></option>').val(val).text(label);
+                    if (val === defaultToSelect) {
+                        $opt.prop('selected', true);
+                    }
+                    $modelSelect.append($opt);
+                });
+            } else {
+                var def = prov.default_model || '';
+                $modelSelect.append($('<option></option>').val(def).text(def).prop('selected', true));
+            }
+        }
 
         if ($providerSelect.length) {
             $providerSelect.on('change', function() {
-                var selected = $(this).val();
-                if (selected === 'custom') {
-                    $customRow.show();
-                    $modelInput.attr('placeholder', 'llama-3.3-70b-versatile');
-                } else {
-                    $customRow.hide();
-                    if (selected === 'gemini') {
-                        $modelInput.attr('placeholder', 'gemini-1.5-flash');
-                    } else if (selected === 'openai') {
-                        $modelInput.attr('placeholder', 'gpt-4o-mini');
-                    } else if (selected === 'claude') {
-                        $modelInput.attr('placeholder', 'claude-3-5-haiku-20241022');
-                    } else if (selected === 'deepseek') {
-                        $modelInput.attr('placeholder', 'deepseek-chat');
-                    } else if (selected === 'openrouter') {
-                        $modelInput.attr('placeholder', 'google/gemini-flash-1.5');
-                    }
-                }
+                var provKey = $(this).val();
+                updateModelDropdown(provKey, '');
             });
         }
 

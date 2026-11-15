@@ -30,50 +30,55 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
         public static function get_providers() {
             return [
                 'gemini' => [
-                    'label'         => 'Google Gemini',
+                    'label'         => 'Google Gemini (Vision)',
                     'default_model' => 'gemini-1.5-flash',
                     'models'        => [
-                        'gemini-1.5-flash' => 'Gemini 1.5 Flash (Fast & Free Tier)',
-                        'gemini-2.0-flash' => 'Gemini 2.0 Flash (Next-Gen)',
-                        'gemini-1.5-pro'   => 'Gemini 1.5 Pro (Deep Reasoning)',
+                        'gemini-1.5-flash' => 'Gemini 1.5 Flash (Ultra-Fast & Free Tier)',
+                        'gemini-2.0-flash' => 'Gemini 2.0 Flash (Next-Gen Multimodal)',
+                        'gemini-1.5-pro'   => 'Gemini 1.5 Pro (Deep Reasoning & High Accuracy)',
                     ],
                     'supports_vision' => true,
                 ],
                 'openai' => [
-                    'label'         => 'OpenAI',
+                    'label'         => 'OpenAI (Vision)',
                     'default_model' => 'gpt-4o-mini',
                     'models'        => [
-                        'gpt-4o-mini' => 'GPT-4o Mini (Fast & Cost-Effective)',
-                        'gpt-4o'      => 'GPT-4o (High Accuracy Vision)',
+                        'gpt-4o-mini' => 'GPT-4o Mini (Fast & Cost-Effective Vision)',
+                        'gpt-4o'      => 'GPT-4o (Flagship High-Precision Vision)',
                     ],
                     'supports_vision' => true,
                 ],
                 'deepseek' => [
-                    'label'         => 'DeepSeek',
+                    'label'         => 'DeepSeek (Text & Context)',
                     'default_model' => 'deepseek-chat',
                     'models'        => [
-                        'deepseek-chat'     => 'DeepSeek-V3 (Ultra-Low Cost Text)',
+                        'deepseek-chat'     => 'DeepSeek-V3 (Chat & Image Context Intelligence)',
                         'deepseek-reasoner' => 'DeepSeek-R1 (Logical Reasoning)',
                     ],
                     'supports_vision' => false,
                 ],
                 'claude' => [
-                    'label'         => 'Anthropic Claude',
+                    'label'         => 'Anthropic Claude (Vision)',
                     'default_model' => 'claude-3-5-haiku-20241022',
                     'models'        => [
-                        'claude-3-5-haiku-20241022'  => 'Claude 3.5 Haiku (Fast)',
-                        'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet (Nuanced)',
+                        'claude-3-5-haiku-20241022'  => 'Claude 3.5 Haiku (Fast & Lightweight)',
+                        'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet (State-of-the-Art Vision)',
                     ],
                     'supports_vision' => true,
                 ],
                 'openrouter' => [
-                    'label'           => 'OpenRouter',
+                    'label'           => 'OpenRouter (Multi-Provider Gateway)',
                     'default_model'   => 'google/gemini-flash-1.5',
-                    'models'          => [],
+                    'models'          => [
+                        'google/gemini-flash-1.5'     => 'Google Gemini 1.5 Flash (via OpenRouter)',
+                        'openai/gpt-4o-mini'          => 'OpenAI GPT-4o Mini (via OpenRouter)',
+                        'anthropic/claude-3.5-sonnet' => 'Claude 3.5 Sonnet (via OpenRouter)',
+                        'deepseek/deepseek-chat'      => 'DeepSeek-V3 (via OpenRouter)',
+                    ],
                     'supports_vision' => true,
                 ],
                 'custom' => [
-                    'label'           => 'Custom Endpoint (Ollama / Groq / vLLM)',
+                    'label'           => 'Custom / Local (Ollama, Groq, vLLM)',
                     'default_model'   => 'llama-3.3-70b-versatile',
                     'models'          => [],
                     'supports_vision' => true,
@@ -141,6 +146,9 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
             switch ( $provider ) {
                 case 'gemini':
                     return self::call_gemini_vision( $api_key, $model, $base64_image, $mime_type, $prompt );
+
+                case 'deepseek':
+                    return self::call_deepseek( $api_key, $model, $image_path, $prompt );
 
                 case 'openai':
                     return self::call_openai_vision( $api_key, $model, $base64_image, $mime_type, $prompt );
@@ -330,6 +338,64 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
 
             if ( 200 !== $status ) {
                 $err_msg = isset( $body['error']['message'] ) ? $body['error']['message'] : "HTTP $status error from AI endpoint";
+                return [ 'success' => false, 'error' => $err_msg ];
+            }
+
+            $text = $body['choices'][0]['message']['content'] ?? '';
+            return self::parse_json_result( $text );
+        }
+
+        /**
+         * Call DeepSeek API (Text & Image Context Intelligence)
+         */
+        private static function call_deepseek( $api_key, $model, $image_path, $prompt ) {
+            $filename   = basename( $image_path );
+            $clean_name = trim( preg_replace( '/[_\-\.]+/', ' ', pathinfo( $filename, PATHINFO_FILENAME ) ) );
+
+            $enhanced_prompt = sprintf(
+                "%s\nImage context: Filename is \"%s\" (%s). Produce descriptive, WCAG-compliant alt text.",
+                $prompt,
+                $filename,
+                $clean_name
+            );
+
+            $url = 'https://api.deepseek.com/chat/completions';
+
+            $payload = [
+                'model'       => $model ?: 'deepseek-chat',
+                'messages'    => [
+                    [
+                        'role'    => 'system',
+                        'content' => 'You are an accessibility and SEO specialist for WordPress. Output only valid JSON with keys "alt_text" and "title".',
+                    ],
+                    [
+                        'role'    => 'user',
+                        'content' => $enhanced_prompt,
+                    ],
+                ],
+                'response_format' => [ 'type' => 'json_object' ],
+                'max_tokens'      => 300,
+                'temperature'     => 0.2,
+            ];
+
+            $response = wp_remote_post( $url, [
+                'headers' => [
+                    'Content-Type'  => 'application/json',
+                    'Authorization' => 'Bearer ' . $api_key,
+                ],
+                'body'    => wp_json_encode( $payload ),
+                'timeout' => 30,
+            ] );
+
+            if ( is_wp_error( $response ) ) {
+                return [ 'success' => false, 'error' => $response->get_error_message() ];
+            }
+
+            $status = wp_remote_retrieve_response_code( $response );
+            $body   = json_decode( wp_remote_retrieve_body( $response ), true );
+
+            if ( 200 !== $status ) {
+                $err_msg = isset( $body['error']['message'] ) ? $body['error']['message'] : "HTTP $status error from DeepSeek";
                 return [ 'success' => false, 'error' => $err_msg ];
             }
 
