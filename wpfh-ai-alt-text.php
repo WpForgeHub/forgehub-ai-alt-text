@@ -5,6 +5,7 @@
  * Description:       Generate WCAG-compliant image Alt-Text and SEO titles using your own Google Gemini, OpenAI, Claude, DeepSeek, or OpenRouter API key (BYOK).
  * Version:           1.0.0
  * Requires at least: 6.0
+ * Tested up to:      6.7
  * Requires PHP:      7.4
  * Author:            WPForgeHub
  * Author URI:        https://wpforgehub.com
