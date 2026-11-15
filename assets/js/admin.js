@@ -6,7 +6,9 @@
 
     $(document).ready(function() {
 
-        // Settings Page: Dynamic Provider & Model Switcher with Manual Typing Fallback
+        // =========================================================================
+        // 1. Settings Page: Dynamic Provider & Model Switcher with Manual Typing
+        // =========================================================================
         var $providerSelect = $('#wpfh_provider');
         var $customRow      = $('#wpfh_custom_endpoint_row');
         var $modelSelect    = $('#wpfh_model_select');
@@ -84,61 +86,101 @@
             }
         }
 
-        if ($providerSelect.length) {
-            $providerSelect.on('change', function() {
-                var provKey = $(this).val();
-                updateModelDropdown(provKey, '');
-            });
-        }
+        // Provider change
+        $(document).on('change', '#wpfh_provider', function() {
+            var provKey = $(this).val();
+            updateModelDropdown(provKey, '');
+        });
 
-        // When user changes the preset selectbox
-        if ($modelSelect.length) {
-            $modelSelect.on('change', function() {
-                var val = $(this).val();
-                if (val === '__custom__') {
-                    $manualWrap.slideDown(150);
-                    $toggleBtn.text('📋 Choose from List');
-                    $modelInput.focus();
-                } else {
-                    $manualWrap.slideUp(150);
-                    $toggleBtn.text('✏️ Type Manually');
-                    $modelInput.val(val);
-                }
-            });
-        }
+        // Model preset dropdown change
+        $(document).on('change', '#wpfh_model_select', function() {
+            var val   = $(this).val();
+            var $wrap = $('#wpfh_manual_model_wrap');
+            var $btn  = $('#wpfh_toggle_manual_model');
+            var $inp  = $('#wpfh_model_input');
 
-        // Toggle manual typing input
-        if ($toggleBtn.length) {
-            $toggleBtn.on('click', function(e) {
-                e.preventDefault();
-                if ($manualWrap.is(':visible')) {
-                    $manualWrap.slideUp(150);
-                    $(this).text('✏️ Type Manually');
-                    if ($modelSelect.val() === '__custom__') {
-                        var firstVal = $modelSelect.find('option:first').val();
-                        if (firstVal && firstVal !== '__custom__') {
-                            $modelSelect.val(firstVal);
-                            $modelInput.val(firstVal);
-                        }
+            if (val === '__custom__') {
+                $wrap.show();
+                $btn.text('📋 Choose from List');
+                $inp.focus();
+            } else {
+                $wrap.hide();
+                $btn.text('✏️ Type Manually');
+                $inp.val(val);
+            }
+        });
+
+        // Toggle button: Type manually <-> Choose from list
+        $(document).on('click', '#wpfh_toggle_manual_model', function(e) {
+            e.preventDefault();
+            var $wrap = $('#wpfh_manual_model_wrap');
+            var $btn  = $(this);
+            var $sel  = $('#wpfh_model_select');
+            var $inp  = $('#wpfh_model_input');
+
+            if ($wrap.is(':visible')) {
+                // Currently in manual mode -> switch to list mode
+                $wrap.hide();
+                $btn.text('✏️ Type Manually');
+                if ($sel.val() === '__custom__') {
+                    var firstVal = $sel.find('option:not([value="__custom__"]):first').val();
+                    if (firstVal) {
+                        $sel.val(firstVal);
+                        $inp.val(firstVal);
                     }
-                } else {
-                    $manualWrap.slideDown(150);
-                    $(this).text('📋 Choose from List');
-                    $modelSelect.val('__custom__');
-                    $modelInput.focus();
                 }
-            });
-        }
+            } else {
+                // Currently in list mode -> switch to manual mode
+                $wrap.show();
+                $btn.text('📋 Choose from List');
+                $sel.val('__custom__');
+                $inp.focus();
+            }
+        });
 
-        // Media Library / Modal Single Image Generation
+        // When user types directly into manual model input
+        $(document).on('input', '#wpfh_model_input', function() {
+            var typed = $(this).val();
+            var $sel  = $('#wpfh_model_select');
+            if ($sel.find('option[value="' + typed + '"]').length) {
+                $sel.val(typed);
+            } else {
+                $sel.val('__custom__');
+            }
+        });
+
+
+        // =========================================================================
+        // 2. Media Library / Modal Single Image Generation (Granular Per-Image)
+        // =========================================================================
         $(document).on('click', '.wpfh-aat-btn', function(e) {
             e.preventDefault();
 
             var $btn         = $(this);
+            var $box         = $btn.closest('.wpfh-aat-media-box');
             var $status      = $btn.siblings('.wpfh-aat-status');
             var attachmentId = $btn.data('attachment-id');
 
             if (!attachmentId) {
+                return;
+            }
+
+            // Granular per-image field selection
+            var selectedFields = [];
+            var overwrite      = 1;
+
+            if ($box.length) {
+                if ($box.find('.wpfh-field-alt').is(':checked')) selectedFields.push('alt_text');
+                if ($box.find('.wpfh-field-title').is(':checked')) selectedFields.push('title');
+                if ($box.find('.wpfh-field-caption').is(':checked')) selectedFields.push('caption');
+                if ($box.find('.wpfh-field-desc').is(':checked')) selectedFields.push('description');
+                overwrite = $box.find('.wpfh-field-overwrite').is(':checked') ? 1 : 0;
+            } else {
+                selectedFields = ['alt_text'];
+            }
+
+            if (selectedFields.length === 0) {
+                $status.removeClass('is-loading is-success').addClass('is-error').text('Please check at least one field (Alt, Title, Caption, or Desc).');
                 return;
             }
 
@@ -152,7 +194,9 @@
                 data: {
                     action: 'wpfh_aat_generate_single',
                     security: wpfhAatData.nonce,
-                    attachment_id: attachmentId
+                    attachment_id: attachmentId,
+                    fields: selectedFields,
+                    overwrite: overwrite
                 },
                 success: function(response) {
                     $btn.prop('disabled', false);

@@ -90,24 +90,27 @@ class WPFH_AAT_Admin {
      * Enqueue CSS and JS in WordPress admin.
      */
     public static function enqueue_assets( $hook ) {
-        // Enqueue on media screens and our settings page
-        $allowed_screens = [ 'settings_page_wpfh-ai-alt-text', 'upload.php', 'post.php', 'post-new.php' ];
+        // Enqueue on media screens, post/page editors, and our settings page
+        $allowed_screens = [ 'settings_page_wpfh-ai-alt-text', 'upload.php', 'post.php', 'post-new.php', 'page.php', 'page-new.php' ];
         if ( ! in_array( $hook, $allowed_screens, true ) && ! wp_attachment_is_image() ) {
             return;
         }
+
+        $css_ver = file_exists( WPFH_AAT_PATH . 'assets/css/admin.css' ) ? filemtime( WPFH_AAT_PATH . 'assets/css/admin.css' ) : WPFH_AAT_VERSION;
+        $js_ver  = file_exists( WPFH_AAT_PATH . 'assets/js/admin.js' ) ? filemtime( WPFH_AAT_PATH . 'assets/js/admin.js' ) : WPFH_AAT_VERSION;
 
         wp_enqueue_style(
             'wpfh-aat-admin-css',
             WPFH_AAT_URL . 'assets/css/admin.css',
             [],
-            WPFH_AAT_VERSION
+            $css_ver
         );
 
         wp_enqueue_script(
             'wpfh-aat-admin-js',
             WPFH_AAT_URL . 'assets/js/admin.js',
             [ 'jquery' ],
-            WPFH_AAT_VERSION,
+            $js_ver,
             true
         );
 
@@ -128,28 +131,67 @@ class WPFH_AAT_Admin {
     }
 
     /**
-     * Add "Generate with AI" button into Media Library attachment sidebar.
+     * Add "Generate with AI" button and per-image field checkboxes into Media Library sidebar.
      */
     public static function add_media_modal_button( $form_fields, $post ) {
         if ( ! wp_attachment_is_image( $post->ID ) ) {
             return $form_fields;
         }
 
+        $settings = self::get_settings();
+
+        $alt_checked   = ! empty( $settings['generate_alt'] ) ? 'checked="checked"' : '';
+        $title_checked = ! empty( $settings['generate_title'] ) ? 'checked="checked"' : '';
+        $capt_checked  = ! empty( $settings['generate_caption'] ) ? 'checked="checked"' : '';
+        $desc_checked  = ! empty( $settings['generate_desc'] ) ? 'checked="checked"' : '';
+        $over_checked  = ! empty( $settings['overwrite_existing'] ) ? 'checked="checked"' : '';
+
         $form_fields['wpfh_aat_button'] = [
-            'label' => __( 'AI Alt-Text', 'wpfh-ai-alt-text' ),
+            'label' => __( 'AI Metadata', 'wpfh-ai-alt-text' ),
             'input' => 'html',
             'html'  => sprintf(
-                '<div class="wpfh-aat-media-action">
-                    <button type="button" class="button button-secondary wpfh-aat-btn" data-attachment-id="%d">
-                        <span class="dashicons dashicons-superhero" style="font-size:16px;line-height:1.6;margin-right:4px;"></span>
-                        %s
-                    </button>
-                    <span class="wpfh-aat-status" style="margin-left:8px;font-size:12px;"></span>
+                '<div class="wpfh-aat-media-box" data-attachment-id="%1$d" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:12px;margin:4px 0 10px 0;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#475569;letter-spacing:0.04em;margin-bottom:8px;">
+                        %2$s
+                    </div>
+                    <div class="wpfh-aat-media-toggles" style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;margin-bottom:10px;">
+                        <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:#0f172a;font-weight:600;">
+                            <input type="checkbox" class="wpfh-field-alt" value="1" %3$s /> Alt
+                        </label>
+                        <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:#0f172a;font-weight:600;">
+                            <input type="checkbox" class="wpfh-field-title" value="1" %4$s /> Title
+                        </label>
+                        <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:#0f172a;font-weight:600;">
+                            <input type="checkbox" class="wpfh-field-caption" value="1" %5$s /> Caption
+                        </label>
+                        <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;color:#0f172a;font-weight:600;">
+                            <input type="checkbox" class="wpfh-field-desc" value="1" %6$s /> Desc
+                        </label>
+                    </div>
+                    <div style="margin-bottom:10px;font-size:11px;color:#64748b;border-top:1px dashed #cbd5e1;padding-top:6px;">
+                        <label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;">
+                            <input type="checkbox" class="wpfh-field-overwrite" value="1" %7$s /> %8$s
+                        </label>
+                    </div>
+                    <div class="wpfh-aat-media-action" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                        <button type="button" class="button button-primary wpfh-aat-btn" data-attachment-id="%1$d" style="font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+                            <span class="dashicons dashicons-superhero" style="font-size:16px;line-height:1.4;margin:0;"></span>
+                            %9$s
+                        </button>
+                        <span class="wpfh-aat-status" style="font-size:12px;"></span>
+                    </div>
                 </div>',
                 absint( $post->ID ),
+                esc_html__( 'Generate for this image:', 'wpfh-ai-alt-text' ),
+                $alt_checked,
+                $title_checked,
+                $capt_checked,
+                $desc_checked,
+                $over_checked,
+                esc_html__( 'Overwrite existing values', 'wpfh-ai-alt-text' ),
                 esc_html__( 'Generate with AI', 'wpfh-ai-alt-text' )
             ),
-            'helps' => __( 'Powered by your BYOK AI provider configured in Settings.', 'wpfh-ai-alt-text' ),
+            'helps' => __( 'Defaults are set in Settings. Toggle fields specifically for this image as needed.', 'wpfh-ai-alt-text' ),
         ];
 
         return $form_fields;
@@ -171,7 +213,7 @@ class WPFH_AAT_Admin {
         }
 
         $file_path = get_attached_file( $attachment_id );
-        if ( ! $file_path || ! file_exists( $file_path ) ) {
+        if ( ! file_path || ! file_exists( $file_path ) ) {
             wp_send_json_error( [ 'message' => __( 'Image file not found on disk.', 'wpfh-ai-alt-text' ) ] );
         }
 
@@ -186,24 +228,28 @@ class WPFH_AAT_Admin {
             ] );
         }
 
-        // Determine which fields user wants generated
-        $enabled_fields = [];
-        if ( ! empty( $settings['generate_alt'] ) ) {
-            $enabled_fields[] = 'alt_text';
-        }
-        if ( ! empty( $settings['generate_title'] ) ) {
-            $enabled_fields[] = 'title';
-        }
-        if ( ! empty( $settings['generate_caption'] ) ) {
-            $enabled_fields[] = 'caption';
-        }
-        if ( ! empty( $settings['generate_desc'] ) ) {
-            $enabled_fields[] = 'description';
+        // Determine which fields user wants generated (per-image override from Media modal or fallback to settings)
+        if ( isset( $_POST['fields'] ) && is_array( $_POST['fields'] ) ) {
+            $allowed = [ 'alt_text', 'title', 'caption', 'description' ];
+            $enabled_fields = array_values( array_intersect( $allowed, array_map( 'sanitize_key', $_POST['fields'] ) ) );
+        } else {
+            $enabled_fields = [];
+            if ( ! empty( $settings['generate_alt'] ) )     $enabled_fields[] = 'alt_text';
+            if ( ! empty( $settings['generate_title'] ) )   $enabled_fields[] = 'title';
+            if ( ! empty( $settings['generate_caption'] ) ) $enabled_fields[] = 'caption';
+            if ( ! empty( $settings['generate_desc'] ) )    $enabled_fields[] = 'description';
         }
 
         // Fallback: if user unchecked all, default to alt_text
         if ( empty( $enabled_fields ) ) {
             $enabled_fields = [ 'alt_text' ];
+        }
+
+        // Overwrite policy (per-image override from Media modal or fallback to settings)
+        if ( isset( $_POST['overwrite'] ) ) {
+            $overwrite = ! empty( $_POST['overwrite'] );
+        } else {
+            $overwrite = ! empty( $settings['overwrite_existing'] );
         }
 
         $instructions = [];
