@@ -4,6 +4,15 @@
   <img src="assets/wpfh-ai-alt-text-banner.png" alt="WPForgeHub AI Alt Text Banner" width="100%" style="border-radius: 12px;" />
 </p>
 
+<p align="center">
+  <a href="https://github.com/WpForgeHub/wpfh-ai-alt-text/releases/latest/download/wpfh-ai-alt-text-1.0.0-free.zip">
+    <img src="https://img.shields.io/badge/📥_Download_Free_ZIP-v1.0.0-2563eb?style=for-the-badge&logo=wordpress&logoColor=white" alt="Download Free ZIP" />
+  </a>
+  <a href="https://wpforgehub.com/plugins/ai-alt-text/">
+    <img src="https://img.shields.io/badge/🌐_Plugin_Homepage-WPForgeHub-0f172a?style=for-the-badge" alt="WPForgeHub Plugin Page" />
+  </a>
+</p>
+
 [![WordPress 6.0+](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)](https://wordpress.org)
 [![Tested up to 6.7](https://img.shields.io/badge/Tested%20up%20to-6.7-brightgreen.svg)](https://wordpress.org)
 [![PHP 7.4-8.3](https://img.shields.io/badge/PHP-7.4%20--%208.3-green.svg)](https://php.net)
@@ -11,7 +20,7 @@
 [![Zero Bloat](https://img.shields.io/badge/Assets-%3C50KB-purple.svg)](https://wpforgehub.com)
 [![BYOK Architecture](https://img.shields.io/badge/Architecture-BYOK-cyan.svg)](https://wpforgehub.com)
 
-> ⚡ **Generate WCAG-compliant image Alt-Text and SEO titles directly from your WordPress Media Library using your own AI API keys.**
+> ⚡ **Generate WCAG-compliant image Alt-Text, Titles, Captions, and Descriptions directly from your WordPress Media Library using your own AI API keys.**
 
 ---
 
@@ -21,18 +30,21 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 
 * **Zero Middleware:** Your server connects directly to your chosen AI provider using native WordPress APIs.
 * **Virtually Free Operations:** Use Google Gemini's generous free tier or OpenAI's GPT-4o-mini for fractions of a penny per image.
+* **Selectable Metadata:** Choose exactly which fields you want AI to generate: Alt Text, Image Title, Caption, or Description.
+* **Smart Overwrite Policy:** Never worry about overwriting your hand-crafted editorial captions or custom titles.
 * **Under 50 KB Footprint:** Zero external CDN dependencies, zero bloated JavaScript frameworks. Pure performance.
 
 ---
 
 ## 🤖 Supported AI Providers (6-in-1 Engine)
 
-1. **Google Gemini:** `gemini-1.5-flash`, `gemini-2.0-flash` *(Fast & free quota)*
-2. **OpenAI:** `gpt-4o-mini`, `gpt-4o` *(Industry standard vision)*
-3. **Anthropic Claude:** `claude-3-5-haiku`, `claude-3-5-sonnet` *(Most natural copy)*
-4. **DeepSeek:** `deepseek-chat`, `deepseek-reasoner` *(Low cost powerhouse)*
+1. **Google Gemini:** `gemini-1.5-flash`, `gemini-2.0-flash`, `gemini-1.5-pro` *(Ultra-fast & free tier quota)*
+2. **DeepSeek:** `deepseek-flash` *(Native Multimodal Vision)*, `deepseek-v4-pro` *(Deep reasoning)*, `deepseek-chat`
+3. **OpenAI:** `gpt-4o-mini`, `gpt-4o` *(Industry standard vision)*
+4. **Anthropic Claude:** `claude-3-5-haiku`, `claude-3-5-sonnet` *(Most natural copy)*
 5. **OpenRouter:** Connect 100+ open vision models with a single API key
 6. **Custom Endpoint:** Connect your local `Ollama`, `Groq`, or `vLLM` server
+* **Custom Models:** Don't want to use standard presets? Type any custom model identifier manually!
 
 ---
 
@@ -43,8 +55,10 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 | **Media Library 1-Click Alt-Text** | ✅ | ✅ |
 | **All 6 AI Providers (BYOK)** | ✅ | ✅ |
 | **Multi-Language Output (EN, TR, DE, ES, FR, IT)** | ✅ | ✅ |
+| **Custom Model Manual Entry** | ✅ | ✅ |
+| **Multi-Field Selection (Alt, Title, Caption, Desc)** | ✅ | ✅ |
+| **Preserve Manual Edits (Overwrite Policy)** | ✅ | ✅ |
 | **Brand & Niche Context Guidance** | ✅ | ✅ |
-| **Auto-Update Attachment Title** | ✅ | ✅ |
 | **Background Bulk Scanner (WP-Cron)** | ❌ | **✅ (10,000+ Images)** |
 | **Instant Upload Automation (`add_attachment`)** | ❌ | **✅ Automatic** |
 | **WooCommerce Context (Title, SKU, Category)** | ❌ | **✅ Deep SEO** |
@@ -60,19 +74,27 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 | **5 Sites** | $7.99 / mo | **$39 / yr** | $79 *(One-time)* | Freelancers & web developers |
 | **Unlimited Sites** | $12.99 / mo | **$69 / yr** | $129 *(One-time)* | Agencies & multi-site networks |
 
-👉 **[Get PRO on WPForgeHub](https://wpforgehub.com/#products)** — Instant license delivery, automatic updates, and 100% money-back guarantee.
+👉 **[Get PRO on WPForgeHub](https://wpforgehub.com/plugins/ai-alt-text/)** — Instant license delivery, automatic updates, and 14-day money-back guarantee.
 
 ---
 
 ## 📦 Installation
 
-1. Clone or download this repository into your `/wp-content/plugins/wpfh-ai-alt-text/` folder:
-   ```bash
-   git clone https://github.com/WpForgeHub/wpfh-ai-alt-text.git
-   ```
-2. Activate the plugin through the **Plugins** menu in WordPress.
-3. Go to **Settings -> AI Alt-Text (BYOK)**, choose your AI provider, and enter your API key.
-4. Open **Media -> Library**, click any image, and hit **Generate with AI**!
+### Option 1: Direct Download (Easiest)
+1. Download the latest release: [wpfh-ai-alt-text-1.0.0-free.zip](https://github.com/WpForgeHub/wpfh-ai-alt-text/releases/latest/download/wpfh-ai-alt-text-1.0.0-free.zip).
+2. In your WordPress admin, navigate to **Plugins &rarr; Add New Plugin &rarr; Upload Plugin**.
+3. Choose the downloaded ZIP file and click **Install Now**, then **Activate**.
+
+### Option 2: Clone via Git
+```bash
+cd wp-content/plugins/
+git clone https://github.com/WpForgeHub/wpfh-ai-alt-text.git
+```
+
+### Setup in 60 Seconds
+1. Go to **Settings &rarr; AI Alt-Text (BYOK)** in your WordPress sidebar.
+2. Select your provider (e.g. Google Gemini or DeepSeek) and paste your API key.
+3. Open **Media &rarr; Library**, click any image, and click **⚡ Generate with AI**!
 
 ---
 
