@@ -49,13 +49,15 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                     'supports_vision' => true,
                 ],
                 'deepseek' => [
-                    'label'         => 'DeepSeek (Text & Context)',
-                    'default_model' => 'deepseek-chat',
+                    'label'         => 'DeepSeek (Flash Vision & Pro Reasoning)',
+                    'default_model' => 'deepseek-flash',
                     'models'        => [
-                        'deepseek-chat'     => 'DeepSeek-V3 (Chat & Image Context Intelligence)',
-                        'deepseek-reasoner' => 'DeepSeek-R1 (Logical Reasoning)',
+                        'deepseek-flash'    => 'DeepSeek Flash (Native Multimodal Vision & Ultra Fast)',
+                        'deepseek-v4-pro'   => 'DeepSeek-V4 Pro (Heavy Deep Reasoning)',
+                        'deepseek-chat'     => 'DeepSeek-V3 / Chat (General Fast Model)',
+                        'deepseek-reasoner' => 'DeepSeek-R1 / Reasoner (Chain-of-Thought Reasoning)',
                     ],
-                    'supports_vision' => false,
+                    'supports_vision' => true,
                 ],
                 'claude' => [
                     'label'         => 'Anthropic Claude (Vision)',
@@ -148,7 +150,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                     return self::call_gemini_vision( $api_key, $model, $base64_image, $mime_type, $prompt );
 
                 case 'deepseek':
-                    return self::call_deepseek( $api_key, $model, $image_path, $prompt );
+                    return self::call_deepseek( $api_key, $model, $image_path, $base64_image, $mime_type, $prompt );
 
                 case 'openai':
                     return self::call_openai_vision( $api_key, $model, $base64_image, $mime_type, $prompt );
@@ -241,7 +243,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
 
             $payload = [
                 'model'      => $model,
-                'max_tokens' => 300,
+                'max_tokens' => 600,
                 'messages'   => [
                     [
                         'role'    => 'user',
@@ -315,7 +317,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                     ],
                 ],
                 'response_format' => [ 'type' => 'json_object' ],
-                'max_tokens'      => 300,
+                'max_tokens'      => 600,
             ];
 
             $headers = [ 'Content-Type' => 'application/json' ];
@@ -346,14 +348,22 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
         }
 
         /**
-         * Call DeepSeek API (Text & Image Context Intelligence)
+         * Call DeepSeek API (Vision for deepseek-flash / Text Context for Pro & Chat)
          */
-        private static function call_deepseek( $api_key, $model, $image_path, $prompt ) {
+        private static function call_deepseek( $api_key, $model, $image_path, $base64_image, $mime_type, $prompt ) {
+            $model = $model ?: 'deepseek-flash';
+
+            // If using deepseek-flash or vision-capable model, send OpenAI-compatible multimodal payload
+            if ( false !== stripos( $model, 'flash' ) || false !== stripos( $model, 'vision' ) ) {
+                return self::call_openai_compatible_vision( 'https://api.deepseek.com', $api_key, $model, $base64_image, $mime_type, $prompt );
+            }
+
+            // For text-only DeepSeek models (deepseek-v4-pro, deepseek-chat, deepseek-reasoner), use filename & context
             $filename   = basename( $image_path );
             $clean_name = trim( preg_replace( '/[_\-\.]+/', ' ', pathinfo( $filename, PATHINFO_FILENAME ) ) );
 
             $enhanced_prompt = sprintf(
-                "%s\nImage context: Filename is \"%s\" (%s). Produce descriptive, WCAG-compliant alt text.",
+                "%s\nImage context: Filename is \"%s\" (%s). Produce descriptive, WCAG-compliant alt text and image metadata.",
                 $prompt,
                 $filename,
                 $clean_name
@@ -362,11 +372,11 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
             $url = 'https://api.deepseek.com/chat/completions';
 
             $payload = [
-                'model'       => $model ?: 'deepseek-chat',
+                'model'       => $model,
                 'messages'    => [
                     [
                         'role'    => 'system',
-                        'content' => 'You are an accessibility and SEO specialist for WordPress. Output only valid JSON with keys "alt_text" and "title".',
+                        'content' => 'You are an accessibility and SEO specialist for WordPress. Output only valid JSON with the requested keys (e.g. "alt_text", "title", "caption", "description").',
                     ],
                     [
                         'role'    => 'user',
@@ -374,7 +384,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                     ],
                 ],
                 'response_format' => [ 'type' => 'json_object' ],
-                'max_tokens'      => 300,
+                'max_tokens'      => 600,
                 'temperature'     => 0.2,
             ];
 
@@ -418,8 +428,10 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                 return [
                     'success' => true,
                     'data'    => [
-                        'alt_text' => sanitize_text_field( $data['alt_text'] ?? '' ),
-                        'title'    => sanitize_text_field( $data['title'] ?? '' ),
+                        'alt_text'    => sanitize_text_field( $data['alt_text'] ?? '' ),
+                        'caption'     => sanitize_text_field( $data['caption'] ?? '' ),
+                        'title'       => sanitize_text_field( $data['title'] ?? '' ),
+                        'description' => sanitize_textarea_field( $data['description'] ?? '' ),
                     ],
                 ];
             }
@@ -428,8 +440,10 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
             return [
                 'success' => true,
                 'data'    => [
-                    'alt_text' => sanitize_text_field( wp_strip_all_tags( $text ) ),
-                    'title'    => '',
+                    'alt_text'    => sanitize_text_field( wp_strip_all_tags( $text ) ),
+                    'caption'     => '',
+                    'title'       => '',
+                    'description' => '',
                 ],
             ];
         }
