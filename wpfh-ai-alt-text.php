@@ -38,10 +38,10 @@ if ( ! function_exists( 'wpfh_aat_fs' ) ) {
                 require_once $freemius_path;
 
                 $wpfh_aat_fs = fs_dynamic_init( [
-                    'id'               => '16001', // Configured in Freemius Developer Dashboard
-                    'slug'             => 'wpfh-ai-alt-text',
+                    'id'               => '44985',
+                    'slug'             => 'ai-alt-text-generator',
                     'type'             => 'plugin',
-                    'public_key'       => 'pk_placeholder',
+                    'public_key'       => 'pk_862f10dd7623aebdb2cd2e4e4f840',
                     'is_premium'       => false,
                     'has_addons'       => false,
                     'has_paid_plans'   => true,
