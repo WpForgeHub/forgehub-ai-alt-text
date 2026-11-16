@@ -20,3 +20,8 @@ tests/
 reports/
 *.py
 *.html
+
+# Private QA & Test Harness Guard
+*.zip
+.env
+credentials*

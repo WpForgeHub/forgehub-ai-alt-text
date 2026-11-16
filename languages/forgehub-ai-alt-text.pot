@@ -2,7 +2,7 @@
 # This file is distributed under the GPLv2 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: WPForgeHub AI Alt-Text & Image SEO Generator (BYOK) 1.1.0\n"
+"Project-Id-Version: AI Alt Text & Image SEO Generator 1.1.0\n"
 "Report-Msgid-Bugs-To: support@wpforgehub.com\n"
 "POT-Creation-Date: 2026-11-15T02:15:00+00:00\n"
 "MIME-Version: 1.0\n"

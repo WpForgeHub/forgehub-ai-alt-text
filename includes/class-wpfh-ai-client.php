@@ -111,7 +111,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
             if ( empty( $api_key ) && 'custom' !== $provider ) {
                 return [
                     'success' => false,
-                    'error'   => __( 'API Key is missing. Please configure your API key in settings.', 'wpfh-ai' ),
+                    'error'   => __( 'API Key is missing. Please configure your API key in settings.', 'forgehub-ai-alt-text' ),
                 ];
             }
 
@@ -157,7 +157,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                 default:
                     return [
                         'success' => false,
-                        'error'   => __( 'Unsupported AI provider for vision.', 'wpfh-ai' ),
+                        'error'   => __( 'Unsupported AI provider for vision.', 'forgehub-ai-alt-text' ),
                     ];
             }
         }
@@ -456,7 +456,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
             if ( ! file_exists( $image_path ) ) {
                 return [
                     'success' => false,
-                    'error'   => __( 'Image file could not be found on server.', 'wpfh-ai-alt-text' ),
+                    'error'   => __( 'Image file could not be found on server.', 'forgehub-ai-alt-text' ),
                 ];
             }
 
@@ -468,7 +468,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                 return [
                     'success' => false,
                     /* translators: %s: MIME type of the unsupported image */
-                    'error'   => sprintf( __( 'Unsupported image format (%s). Vision AI supports JPG, PNG, and WebP only.', 'wpfh-ai-alt-text' ), $mime_type ?: 'unknown' ),
+                    'error'   => sprintf( __( 'Unsupported image format (%s). Vision AI supports JPG, PNG, and WebP only.', 'forgehub-ai-alt-text' ), $mime_type ?: 'unknown' ),
                 ];
             }
 
@@ -517,7 +517,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
             if ( false === $data ) {
                 return [
                     'success' => false,
-                    'error'   => __( 'Unable to read image data.', 'wpfh-ai-alt-text' ),
+                    'error'   => __( 'Unable to read image data.', 'forgehub-ai-alt-text' ),
                 ];
             }
 

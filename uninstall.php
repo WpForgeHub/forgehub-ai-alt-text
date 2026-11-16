@@ -1,6 +1,6 @@
 <?php
 /**
- * WPForgeHub AI Alt-Text — Uninstaller
+ * AI Alt Text — Uninstaller
  *
  * Cleans up options and transients when the plugin is deleted.
  *

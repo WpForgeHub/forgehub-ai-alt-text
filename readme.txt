@@ -1,9 +1,9 @@
-=== WPForgeHub AI Alt-Text & Image SEO Generator (BYOK) ===
+=== AI Alt Text & Image SEO Generator ===
 Contributors: wpforgehub
 Tags: alt text, image seo, ai alt text, gemini, accessibility
 Requires at least: 6.0
-Tested up to: 6.7
-Stable tag: 1.1.1
+Tested up to: 7.1
+Stable tag: 1.1.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -12,7 +12,7 @@ Generate WCAG-compliant alt text and SEO titles for images with zero server bloa
 
 == Description ==
 
-**WPForgeHub AI Alt-Text & Image SEO Generator** is a lightweight, zero-bloat WordPress plugin designed to solve one crucial problem flawlessly: adding descriptive, WCAG-compliant Alt-Text and SEO titles to your media library using modern Vision AI.
+**AI Alt Text & Image SEO Generator** is a lightweight, zero-bloat WordPress plugin designed to solve one crucial problem flawlessly: adding descriptive, WCAG-compliant Alt-Text and SEO titles to your media library using modern Vision AI.
 
 Unlike traditional SaaS plugins that lock your data into expensive third-party subscriptions and slow down your server, our plugin operates on a pure **BYOK (Bring Your Own Key)** architecture. Your images communicate directly from your WordPress server to your chosen AI provider without intermediary proxy servers.
 
@@ -37,7 +37,7 @@ Looking to automate thousands of images across your site?
 
 == Installation ==
 
-1. Upload the `wpfh-ai-alt-text` folder to your `/wp-content/plugins/` directory, or install directly through the WordPress plugins screen.
+1. Upload the `forgehub-ai-alt-text` folder to your `/wp-content/plugins/` directory, or install directly through the WordPress plugins screen.
 2. Activate the plugin through the 'Plugins' screen in WordPress.
 3. Navigate to **Settings -> AI Alt-Text (BYOK)**.
 4. Select your preferred AI provider (e.g., Google Gemini or OpenAI) and paste your API key.
@@ -55,6 +55,10 @@ Yes. The default prompt instructs the AI vision models to produce concise, objec
 Not at all. The plugin executes solely in the WordPress admin dashboard and media modal when you choose to generate alt text. Zero scripts or stylesheets are loaded on your public frontend.
 
 == Changelog ==
+
+= 1.1.2 =
+* Rename: plugin slug and text domain are now forgehub-ai-alt-text (WordPress.org naming rules).
+* Docs: README and readme.txt updated to the unified repository standard.
 
 = 1.0.0 =
 * Initial public release.

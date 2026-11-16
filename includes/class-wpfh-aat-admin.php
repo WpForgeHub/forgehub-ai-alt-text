@@ -1,6 +1,6 @@
 <?php
 /**
- * WPForgeHub AI Alt-Text — Admin & Media Integration
+ * AI Alt Text — Admin & Media Integration
  *
  * @package WPForgeHub\AIAltText
  */
@@ -33,10 +33,10 @@ class WPFH_AAT_Admin {
      */
     public static function add_settings_menu() {
         add_options_page(
-            __( 'AI Alt-Text Settings', 'wpfh-ai-alt-text' ),
-            __( 'AI Alt-Text (BYOK)', 'wpfh-ai-alt-text' ),
+            __( 'AI Alt-Text Settings', 'forgehub-ai-alt-text' ),
+            __( 'AI Alt-Text (BYOK)', 'forgehub-ai-alt-text' ),
             'manage_options',
-            'wpfh-ai-alt-text',
+            'forgehub-ai-alt-text',
             [ __CLASS__, 'render_settings_page' ]
         );
     }
@@ -101,7 +101,7 @@ class WPFH_AAT_Admin {
      * Enqueue CSS and JS in WordPress admin.
      */
     public static function enqueue_assets( $hook ) {
-        $allowed_screens = [ 'settings_page_wpfh-ai-alt-text', 'upload.php', 'post.php', 'post-new.php', 'page.php', 'page-new.php' ];
+        $allowed_screens = [ 'settings_page_forgehub-ai-alt-text', 'upload.php', 'post.php', 'post-new.php', 'page.php', 'page-new.php' ];
         if ( ! in_array( $hook, $allowed_screens, true ) && ! wp_attachment_is_image() ) {
             return;
         }
@@ -134,11 +134,11 @@ class WPFH_AAT_Admin {
             'current_model'    => $settings['model'],
             'is_pro'           => wpfh_aat_fs()->can_use_premium_code(),
             'i18n'             => [
-                'generating'   => __( 'Analyzing image...', 'wpfh-ai-alt-text' ),
-                'success'      => __( 'Alt-Text generated!', 'wpfh-ai-alt-text' ),
-                'error'        => __( 'Failed to generate.', 'wpfh-ai-alt-text' ),
-                'scanning'     => __( 'Scanning media library...', 'wpfh-ai-alt-text' ),
-                'bulk_done'    => __( 'Bulk generation complete!', 'wpfh-ai-alt-text' ),
+                'generating'   => __( 'Analyzing image...', 'forgehub-ai-alt-text' ),
+                'success'      => __( 'Alt-Text generated!', 'forgehub-ai-alt-text' ),
+                'error'        => __( 'Failed to generate.', 'forgehub-ai-alt-text' ),
+                'scanning'     => __( 'Scanning media library...', 'forgehub-ai-alt-text' ),
+                'bulk_done'    => __( 'Bulk generation complete!', 'forgehub-ai-alt-text' ),
             ],
         ] );
     }
@@ -160,7 +160,7 @@ class WPFH_AAT_Admin {
         $over_checked  = ! empty( $settings['overwrite_existing'] ) ? 'checked="checked"' : '';
 
         $form_fields['wpfh_aat_button'] = [
-            'label' => __( 'AI Metadata', 'wpfh-ai-alt-text' ),
+            'label' => __( 'AI Metadata', 'forgehub-ai-alt-text' ),
             'input' => 'html',
             'html'  => sprintf(
                 '<div class="wpfh-aat-media-box" data-attachment-id="%1$d" style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;padding:12px;margin:4px 0 10px 0;">
@@ -195,14 +195,14 @@ class WPFH_AAT_Admin {
                     </div>
                 </div>',
                 $post->ID,
-                esc_html__( 'Select Fields to Generate', 'wpfh-ai-alt-text' ),
+                esc_html__( 'Select Fields to Generate', 'forgehub-ai-alt-text' ),
                 $alt_checked,
                 $title_checked,
                 $capt_checked,
                 $desc_checked,
                 $over_checked,
-                esc_html__( 'Overwrite existing values', 'wpfh-ai-alt-text' ),
-                esc_html__( 'Generate with AI', 'wpfh-ai-alt-text' )
+                esc_html__( 'Overwrite existing values', 'forgehub-ai-alt-text' ),
+                esc_html__( 'Generate with AI', 'forgehub-ai-alt-text' )
             ),
         ];
 
@@ -220,17 +220,17 @@ class WPFH_AAT_Admin {
      */
     public static function process_attachment_ai( $attachment_id, $enabled_fields = [], $overwrite = true ) {
         if ( ! $attachment_id || ! wp_attachment_is_image( $attachment_id ) ) {
-            return [ 'success' => false, 'error' => __( 'Invalid image ID.', 'wpfh-ai-alt-text' ) ];
+            return [ 'success' => false, 'error' => __( 'Invalid image ID.', 'forgehub-ai-alt-text' ) ];
         }
 
         $file_path = get_attached_file( $attachment_id );
         if ( ! $file_path || ! file_exists( $file_path ) ) {
-            return [ 'success' => false, 'error' => __( 'Image file not found on disk.', 'wpfh-ai-alt-text' ) ];
+            return [ 'success' => false, 'error' => __( 'Image file not found on disk.', 'forgehub-ai-alt-text' ) ];
         }
 
         $settings = self::get_settings();
         if ( empty( $settings['api_key'] ) && 'custom' !== $settings['provider'] ) {
-            return [ 'success' => false, 'error' => __( 'API key missing in settings.', 'wpfh-ai-alt-text' ) ];
+            return [ 'success' => false, 'error' => __( 'API key missing in settings.', 'forgehub-ai-alt-text' ) ];
         }
 
         if ( empty( $enabled_fields ) ) {
@@ -371,11 +371,11 @@ class WPFH_AAT_Admin {
      */
     public static function ajax_generate_single() {
         if ( ! check_ajax_referer( 'wpfh_aat_nonce', 'security', false ) ) {
-            wp_send_json_error( [ 'message' => __( 'Security token expired. Please refresh the page.', 'wpfh-ai-alt-text' ) ] );
+            wp_send_json_error( [ 'message' => __( 'Security token expired. Please refresh the page.', 'forgehub-ai-alt-text' ) ] );
         }
 
         if ( ! current_user_can( 'upload_files' ) ) {
-            wp_send_json_error( [ 'message' => __( 'Permission denied.', 'wpfh-ai-alt-text' ) ] );
+            wp_send_json_error( [ 'message' => __( 'Permission denied.', 'forgehub-ai-alt-text' ) ] );
         }
 
         $attachment_id = isset( $_POST['attachment_id'] ) ? absint( $_POST['attachment_id'] ) : 0;
@@ -469,7 +469,7 @@ class WPFH_AAT_Admin {
 
         // Gated: Pro Plan only
         if ( ! wpfh_aat_fs()->can_use_premium_code() ) {
-            wp_send_json_error( [ 'message' => __( 'Bulk Generation is a Pro feature. Please upgrade to unlock unlimited bulk processing.', 'wpfh-ai-alt-text' ) ] );
+            wp_send_json_error( [ 'message' => __( 'Bulk Generation is a Pro feature. Please upgrade to unlock unlimited bulk processing.', 'forgehub-ai-alt-text' ) ] );
         }
 
         global $wpdb;
@@ -516,9 +516,9 @@ class WPFH_AAT_Admin {
         $is_pro    = wpfh_aat_fs()->can_use_premium_code();
         ?>
         <div class="wrap wpfh-aat-wrap">
-            <h1><?php esc_html_e( 'WPForgeHub AI Alt-Text & Image SEO', 'wpfh-ai-alt-text' ); ?></h1>
+            <h1><?php esc_html_e( 'AI Alt Text & Image SEO', 'forgehub-ai-alt-text' ); ?></h1>
             <p class="description">
-                <?php esc_html_e( 'Zero server bloat, 100% private BYOK (Bring Your Own Key) architecture. Your images are sent directly to your chosen AI provider without intermediary servers.', 'wpfh-ai-alt-text' ); ?>
+                <?php esc_html_e( 'Zero server bloat, 100% private BYOK (Bring Your Own Key) architecture. Your images are sent directly to your chosen AI provider without intermediary servers.', 'forgehub-ai-alt-text' ); ?>
             </p>
 
             <div class="wpfh-aat-settings-grid">
@@ -528,7 +528,7 @@ class WPFH_AAT_Admin {
                         <?php settings_fields( 'wpfh_aat_options_group' ); ?>
                         <table class="form-table" role="presentation">
                             <tr>
-                                <th scope="row"><label for="wpfh_provider"><?php esc_html_e( 'AI Provider', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <th scope="row"><label for="wpfh_provider"><?php esc_html_e( 'AI Provider', 'forgehub-ai-alt-text' ); ?></label></th>
                                 <td>
                                     <select name="wpfh_aat_settings[provider]" id="wpfh_provider" class="regular-text">
                                         <?php foreach ( $providers as $key => $prov ) : ?>
@@ -541,23 +541,23 @@ class WPFH_AAT_Admin {
                             </tr>
 
                             <tr>
-                                <th scope="row"><label for="wpfh_api_key"><?php esc_html_e( 'API Key', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <th scope="row"><label for="wpfh_api_key"><?php esc_html_e( 'API Key', 'forgehub-ai-alt-text' ); ?></label></th>
                                 <td>
                                     <input name="wpfh_aat_settings[api_key]" type="password" id="wpfh_api_key" value="<?php echo esc_attr( $settings['api_key'] ); ?>" class="regular-text" placeholder="sk-... or AIzaSy..." />
-                                    <p class="description"><?php esc_html_e( 'Your private API key. Stored securely in your WordPress database.', 'wpfh-ai-alt-text' ); ?></p>
+                                    <p class="description"><?php esc_html_e( 'Your private API key. Stored securely in your WordPress database.', 'forgehub-ai-alt-text' ); ?></p>
                                 </td>
                             </tr>
 
                             <tr id="wpfh_custom_endpoint_row" style="<?php echo 'custom' === $settings['provider'] ? '' : 'display:none;'; ?>">
-                                <th scope="row"><label for="wpfh_custom_endpoint"><?php esc_html_e( 'Custom Base URL', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <th scope="row"><label for="wpfh_custom_endpoint"><?php esc_html_e( 'Custom Base URL', 'forgehub-ai-alt-text' ); ?></label></th>
                                 <td>
                                     <input name="wpfh_aat_settings[custom_endpoint]" type="url" id="wpfh_custom_endpoint" value="<?php echo esc_attr( $settings['custom_endpoint'] ); ?>" class="regular-text" placeholder="http://localhost:11434/v1" />
-                                    <p class="description"><?php esc_html_e( 'OpenAI-compatible endpoint URL for local Ollama, Groq, vLLM, etc.', 'wpfh-ai-alt-text' ); ?></p>
+                                    <p class="description"><?php esc_html_e( 'OpenAI-compatible endpoint URL for local Ollama, Groq, vLLM, etc.', 'forgehub-ai-alt-text' ); ?></p>
                                 </td>
                             </tr>
 
                             <tr>
-                                <th scope="row"><label for="wpfh_model_select"><?php esc_html_e( 'Model Selection', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <th scope="row"><label for="wpfh_model_select"><?php esc_html_e( 'Model Selection', 'forgehub-ai-alt-text' ); ?></label></th>
                                 <td>
                                     <?php
                                     $current_provider = $settings['provider'] ?? 'gemini';
@@ -576,25 +576,25 @@ class WPFH_AAT_Admin {
                                                     </option>
                                                 <?php endforeach; ?>
                                                 <option value="__custom__" <?php selected( ! $is_preset && ! $is_custom_prov, true ); ?>>
-                                                    <?php esc_html_e( '✏️ Custom Model (Type manually...)', 'wpfh-ai-alt-text' ); ?>
+                                                    <?php esc_html_e( '✏️ Custom Model (Type manually...)', 'forgehub-ai-alt-text' ); ?>
                                                 </option>
                                             </select>
 
                                             <button type="button" id="wpfh_toggle_manual_model" class="button button-secondary" style="<?php echo $is_custom_prov ? 'display:none;' : ''; ?>">
-                                                <?php esc_html_e( 'Type Manually', 'wpfh-ai-alt-text' ); ?>
+                                                <?php esc_html_e( 'Type Manually', 'forgehub-ai-alt-text' ); ?>
                                             </button>
                                         </div>
 
                                         <input name="wpfh_aat_settings[model]" type="text" id="wpfh_model_input" value="<?php echo esc_attr( $saved_model ); ?>" class="regular-text" style="margin-top:8px;<?php echo $show_manual ? 'display:block;' : 'display:none;'; ?>" placeholder="e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat" />
                                     </div>
                                     <p class="description">
-                                        <?php esc_html_e( 'Flash models are ultra-fast and cost-effective; Pro models provide maximum reasoning depth.', 'wpfh-ai-alt-text' ); ?>
+                                        <?php esc_html_e( 'Flash models are ultra-fast and cost-effective; Pro models provide maximum reasoning depth.', 'forgehub-ai-alt-text' ); ?>
                                     </p>
                                 </td>
                             </tr>
 
                             <tr>
-                                <th scope="row"><label for="wpfh_language"><?php esc_html_e( 'Target Language', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <th scope="row"><label for="wpfh_language"><?php esc_html_e( 'Target Language', 'forgehub-ai-alt-text' ); ?></label></th>
                                 <td>
                                     <select name="wpfh_aat_settings[language]" id="wpfh_language">
                                         <option value="en" <?php selected( $settings['language'], 'en' ); ?>>English</option>
@@ -608,46 +608,46 @@ class WPFH_AAT_Admin {
                             </tr>
 
                             <tr>
-                                <th scope="row"><label for="wpfh_brand_context"><?php esc_html_e( 'Brand / Niche Context', 'wpfh-ai-alt-text' ); ?></label></th>
+                                <th scope="row"><label for="wpfh_brand_context"><?php esc_html_e( 'Brand / Niche Context', 'forgehub-ai-alt-text' ); ?></label></th>
                                 <td>
-                                    <input name="wpfh_aat_settings[brand_context]" type="text" id="wpfh_brand_context" value="<?php echo esc_attr( $settings['brand_context'] ); ?>" class="large-text" placeholder="<?php esc_attr_e( 'e.g. WordPress plugin store, tech blog, WooCommerce shop...', 'wpfh-ai-alt-text' ); ?>" />
-                                    <p class="description"><?php esc_html_e( 'Guides the AI to use relevant domain keywords and tone.', 'wpfh-ai-alt-text' ); ?></p>
+                                    <input name="wpfh_aat_settings[brand_context]" type="text" id="wpfh_brand_context" value="<?php echo esc_attr( $settings['brand_context'] ); ?>" class="large-text" placeholder="<?php esc_attr_e( 'e.g. WordPress plugin store, tech blog, WooCommerce shop...', 'forgehub-ai-alt-text' ); ?>" />
+                                    <p class="description"><?php esc_html_e( 'Guides the AI to use relevant domain keywords and tone.', 'forgehub-ai-alt-text' ); ?></p>
                                 </td>
                             </tr>
 
                             <tr>
-                                <th scope="row"><?php esc_html_e( 'Fields to Generate', 'wpfh-ai-alt-text' ); ?></th>
+                                <th scope="row"><?php esc_html_e( 'Fields to Generate', 'forgehub-ai-alt-text' ); ?></th>
                                 <td>
                                     <fieldset>
                                         <label for="wpfh_generate_alt" style="display:block;margin-bottom:8px;">
                                             <input name="wpfh_aat_settings[generate_alt]" type="checkbox" id="wpfh_generate_alt" value="1" <?php checked( $settings['generate_alt'], 1 ); ?> />
-                                            <strong><?php esc_html_e( 'Alternative Text (Alt Text)', 'wpfh-ai-alt-text' ); ?></strong>
+                                            <strong><?php esc_html_e( 'Alternative Text (Alt Text)', 'forgehub-ai-alt-text' ); ?></strong>
                                         </label>
 
                                         <label for="wpfh_generate_title" style="display:block;margin-bottom:8px;">
                                             <input name="wpfh_aat_settings[generate_title]" type="checkbox" id="wpfh_generate_title" value="1" <?php checked( $settings['generate_title'], 1 ); ?> />
-                                            <strong><?php esc_html_e( 'Image Title', 'wpfh-ai-alt-text' ); ?></strong>
+                                            <strong><?php esc_html_e( 'Image Title', 'forgehub-ai-alt-text' ); ?></strong>
                                         </label>
 
                                         <label for="wpfh_generate_caption" style="display:block;margin-bottom:8px;">
                                             <input name="wpfh_aat_settings[generate_caption]" type="checkbox" id="wpfh_generate_caption" value="1" <?php checked( $settings['generate_caption'], 1 ); ?> />
-                                            <strong><?php esc_html_e( 'Caption', 'wpfh-ai-alt-text' ); ?></strong>
+                                            <strong><?php esc_html_e( 'Caption', 'forgehub-ai-alt-text' ); ?></strong>
                                         </label>
 
                                         <label for="wpfh_generate_desc" style="display:block;">
                                             <input name="wpfh_aat_settings[generate_desc]" type="checkbox" id="wpfh_generate_desc" value="1" <?php checked( $settings['generate_desc'], 1 ); ?> />
-                                            <strong><?php esc_html_e( 'Description', 'wpfh-ai-alt-text' ); ?></strong>
+                                            <strong><?php esc_html_e( 'Description', 'forgehub-ai-alt-text' ); ?></strong>
                                         </label>
                                     </fieldset>
                                 </td>
                             </tr>
 
                             <tr>
-                                <th scope="row"><?php esc_html_e( 'Overwrite Policy', 'wpfh-ai-alt-text' ); ?></th>
+                                <th scope="row"><?php esc_html_e( 'Overwrite Policy', 'forgehub-ai-alt-text' ); ?></th>
                                 <td>
                                     <label for="wpfh_overwrite_existing">
                                         <input name="wpfh_aat_settings[overwrite_existing]" type="checkbox" id="wpfh_overwrite_existing" value="1" <?php checked( $settings['overwrite_existing'], 1 ); ?> />
-                                        <strong><?php esc_html_e( 'Overwrite existing values', 'wpfh-ai-alt-text' ); ?></strong>
+                                        <strong><?php esc_html_e( 'Overwrite existing values', 'forgehub-ai-alt-text' ); ?></strong>
                                     </label>
                                 </td>
                             </tr>
@@ -656,26 +656,26 @@ class WPFH_AAT_Admin {
                             <tr style="border-top:1px solid #e2e8f0;">
                                 <th scope="row">
                                     <span style="display:inline-flex;align-items:center;gap:6px;">
-                                        <?php esc_html_e( 'Pro Automation', 'wpfh-ai-alt-text' ); ?>
+                                        <?php esc_html_e( 'Pro Automation', 'forgehub-ai-alt-text' ); ?>
                                         <span style="background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;">PRO</span>
                                     </span>
                                 </th>
                                 <td>
                                     <label for="wpfh_auto_upload" style="display:block;margin-bottom:10px;">
                                         <input name="wpfh_aat_settings[auto_generate_upload]" type="checkbox" id="wpfh_auto_upload" value="1" <?php checked( $settings['auto_generate_upload'], 1 ); ?> <?php echo $is_pro ? '' : 'disabled="disabled"'; ?> />
-                                        <strong>📷 <?php esc_html_e( 'Instant Auto-Generate on Upload', 'wpfh-ai-alt-text' ); ?></strong>
+                                        <strong>📷 <?php esc_html_e( 'Instant Auto-Generate on Upload', 'forgehub-ai-alt-text' ); ?></strong>
                                         <span class="description" style="display:block;margin-left:24px;color:#64748b;">
-                                            <?php esc_html_e( 'Automatically analyzes and saves Alt Text the exact second an image is uploaded to WordPress.', 'wpfh-ai-alt-text' ); ?>
-                                            <?php if ( ! $is_pro ) : ?><a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" target="_blank" style="color:#2563eb;font-weight:600;"><?php esc_html_e( 'Unlock with Pro', 'wpfh-ai-alt-text' ); ?> &rarr;</a><?php endif; ?>
+                                            <?php esc_html_e( 'Automatically analyzes and saves Alt Text the exact second an image is uploaded to WordPress.', 'forgehub-ai-alt-text' ); ?>
+                                            <?php if ( ! $is_pro ) : ?><a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" target="_blank" style="color:#2563eb;font-weight:600;"><?php esc_html_e( 'Unlock with Pro', 'forgehub-ai-alt-text' ); ?> &rarr;</a><?php endif; ?>
                                         </span>
                                     </label>
 
                                     <label for="wpfh_enable_woo" style="display:block;">
                                         <input name="wpfh_aat_settings[enable_woo_context]" type="checkbox" id="wpfh_enable_woo" value="1" <?php checked( $settings['enable_woo_context'], 1 ); ?> <?php echo $is_pro ? '' : 'disabled="disabled"'; ?> />
-                                        <strong>🛍️ <?php esc_html_e( 'WooCommerce Product Context Injection', 'wpfh-ai-alt-text' ); ?></strong>
+                                        <strong>🛍️ <?php esc_html_e( 'WooCommerce Product Context Injection', 'forgehub-ai-alt-text' ); ?></strong>
                                         <span class="description" style="display:block;margin-left:24px;color:#64748b;">
-                                            <?php esc_html_e( 'Enriches alt text with WooCommerce product title, SKU code, and category keywords.', 'wpfh-ai-alt-text' ); ?>
-                                            <?php if ( ! $is_pro ) : ?><a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" target="_blank" style="color:#2563eb;font-weight:600;"><?php esc_html_e( 'Unlock with Pro', 'wpfh-ai-alt-text' ); ?> &rarr;</a><?php endif; ?>
+                                            <?php esc_html_e( 'Enriches alt text with WooCommerce product title, SKU code, and category keywords.', 'forgehub-ai-alt-text' ); ?>
+                                            <?php if ( ! $is_pro ) : ?><a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" target="_blank" style="color:#2563eb;font-weight:600;"><?php esc_html_e( 'Unlock with Pro', 'forgehub-ai-alt-text' ); ?> &rarr;</a><?php endif; ?>
                                         </span>
                                     </label>
                                 </td>
@@ -689,13 +689,13 @@ class WPFH_AAT_Admin {
                     <div class="wpfh-aat-bulk-panel" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin-top:24px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
                             <div style="display:flex;align-items:center;gap:8px;">
-                                <h3 style="margin:0;font-size:16px;color:#0f172a;">⚡ <?php esc_html_e( 'Background Bulk Scanner', 'wpfh-ai-alt-text' ); ?></h3>
+                                <h3 style="margin:0;font-size:16px;color:#0f172a;">⚡ <?php esc_html_e( 'Background Bulk Scanner', 'forgehub-ai-alt-text' ); ?></h3>
                                 <span style="background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;">PRO</span>
                             </div>
-                            <span id="wpfh-bulk-stats-label" style="font-size:13px;color:#64748b;"><?php esc_html_e( 'Calculating media stats...', 'wpfh-ai-alt-text' ); ?></span>
+                            <span id="wpfh-bulk-stats-label" style="font-size:13px;color:#64748b;"><?php esc_html_e( 'Calculating media stats...', 'forgehub-ai-alt-text' ); ?></span>
                         </div>
                         <p style="font-size:13px;color:#475569;margin-bottom:16px;">
-                            <?php esc_html_e( 'Scans your entire media library in asynchronous chunks with zero timeouts and automatically fills missing Alt-Text.', 'wpfh-ai-alt-text' ); ?>
+                            <?php esc_html_e( 'Scans your entire media library in asynchronous chunks with zero timeouts and automatically fills missing Alt-Text.', 'forgehub-ai-alt-text' ); ?>
                         </p>
 
                         <div id="wpfh-bulk-progress-wrap" style="display:none;background:#e2e8f0;border-radius:8px;overflow:hidden;height:12px;margin-bottom:14px;">
@@ -705,11 +705,11 @@ class WPFH_AAT_Admin {
                         <div style="display:flex;align-items:center;gap:12px;">
                             <?php if ( $is_pro ) : ?>
                                 <button type="button" id="wpfh-start-bulk-btn" class="button button-primary">
-                                    🚀 <?php esc_html_e( 'Start Bulk AI Scan', 'wpfh-ai-alt-text' ); ?>
+                                    🚀 <?php esc_html_e( 'Start Bulk AI Scan', 'forgehub-ai-alt-text' ); ?>
                                 </button>
                             <?php else : ?>
                                 <a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" class="button button-primary" target="_blank">
-                                    🔒 <?php esc_html_e( 'Upgrade to Pro to Run Bulk Scan', 'wpfh-ai-alt-text' ); ?>
+                                    🔒 <?php esc_html_e( 'Upgrade to Pro to Run Bulk Scan', 'forgehub-ai-alt-text' ); ?>
                                 </a>
                             <?php endif; ?>
                             <span id="wpfh-bulk-status-msg" style="font-size:13px;font-weight:600;color:#0f172a;"></span>
@@ -720,24 +720,24 @@ class WPFH_AAT_Admin {
                 <!-- Right Column: Quick Start Help Box -->
                 <div class="wpfh-aat-sidebar-col">
                     <div class="wpfh-aat-help-box">
-                        <h3>📖 <?php esc_html_e( 'How to Use This Plugin', 'wpfh-ai-alt-text' ); ?></h3>
+                        <h3>📖 <?php esc_html_e( 'How to Use This Plugin', 'forgehub-ai-alt-text' ); ?></h3>
                         <ol class="wpfh-aat-steps">
                             <li>
-                                <strong><?php esc_html_e( 'Choose Provider & Model:', 'wpfh-ai-alt-text' ); ?></strong>
-                                <span><?php esc_html_e( 'Select Google Gemini, DeepSeek, OpenAI, Claude, or OpenRouter and paste your API key.', 'wpfh-ai-alt-text' ); ?></span>
+                                <strong><?php esc_html_e( 'Choose Provider & Model:', 'forgehub-ai-alt-text' ); ?></strong>
+                                <span><?php esc_html_e( 'Select Google Gemini, DeepSeek, OpenAI, Claude, or OpenRouter and paste your API key.', 'forgehub-ai-alt-text' ); ?></span>
                             </li>
                             <li>
-                                <strong><?php esc_html_e( 'Single Image in Media Library:', 'wpfh-ai-alt-text' ); ?></strong>
-                                <span><?php esc_html_e( 'Open any image in Media Library, choose fields (Alt, Title, Caption, Desc), and click "Generate with AI".', 'wpfh-ai-alt-text' ); ?></span>
+                                <strong><?php esc_html_e( 'Single Image in Media Library:', 'forgehub-ai-alt-text' ); ?></strong>
+                                <span><?php esc_html_e( 'Open any image in Media Library, choose fields (Alt, Title, Caption, Desc), and click "Generate with AI".', 'forgehub-ai-alt-text' ); ?></span>
                             </li>
                             <li>
-                                <strong><?php esc_html_e( 'Pro Auto-Upload & Bulk Scan:', 'wpfh-ai-alt-text' ); ?></strong>
-                                <span><?php esc_html_e( 'Upgrade to Pro to automatically generate alt text on upload and scan 10,000+ images in the background.', 'wpfh-ai-alt-text' ); ?></span>
+                                <strong><?php esc_html_e( 'Pro Auto-Upload & Bulk Scan:', 'forgehub-ai-alt-text' ); ?></strong>
+                                <span><?php esc_html_e( 'Upgrade to Pro to automatically generate alt text on upload and scan 10,000+ images in the background.', 'forgehub-ai-alt-text' ); ?></span>
                             </li>
                         </ol>
 
                         <div class="wpfh-aat-sidebar-links">
-                            <h4>🔗 <?php esc_html_e( 'Get Your API Keys', 'wpfh-ai-alt-text' ); ?></h4>
+                            <h4>🔗 <?php esc_html_e( 'Get Your API Keys', 'forgehub-ai-alt-text' ); ?></h4>
                             <ul>
                                 <li><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio &rarr;</a> (Gemini Flash)</li>
                                 <li><a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">DeepSeek Platform &rarr;</a> (DeepSeek Flash & V4 Pro)</li>
@@ -754,18 +754,18 @@ class WPFH_AAT_Admin {
 
             <!-- PRO UPGRADE BANNER -->
             <div class="wpfh-aat-pro-card">
-                <h2>🚀 <?php esc_html_e( 'Need Bulk Generation & Live Auto-Scan?', 'wpfh-ai-alt-text' ); ?></h2>
+                <h2>🚀 <?php esc_html_e( 'Need Bulk Generation & Live Auto-Scan?', 'forgehub-ai-alt-text' ); ?></h2>
                 <p>
-                    <?php esc_html_e( 'With WPForgeHub AI Alt-Text PRO, you never have to click images one-by-one again:', 'wpfh-ai-alt-text' ); ?>
+                    <?php esc_html_e( 'With AI Alt Text PRO, you never have to click images one-by-one again:', 'forgehub-ai-alt-text' ); ?>
                 </p>
                 <ul class="wpfh-aat-feature-list">
-                    <li>⚡ <strong><?php esc_html_e( 'Background Bulk Scanner:', 'wpfh-ai-alt-text' ); ?></strong> <?php esc_html_e( 'Scan your entire 10,000+ media library via WP-Cron / AJAX with zero timeouts.', 'wpfh-ai-alt-text' ); ?></li>
-                    <li>📷 <strong><?php esc_html_e( 'Instant Upload Hook:', 'wpfh-ai-alt-text' ); ?></strong> <?php esc_html_e( 'Automatically generates alt-text the exact second you upload a new photo.', 'wpfh-ai-alt-text' ); ?></li>
-                    <li>🛍️ <strong><?php esc_html_e( 'WooCommerce Context:', 'wpfh-ai-alt-text' ); ?></strong> <?php esc_html_e( 'Includes product title, SKU, and categories in product image alt tags.', 'wpfh-ai-alt-text' ); ?></li>
+                    <li>⚡ <strong><?php esc_html_e( 'Background Bulk Scanner:', 'forgehub-ai-alt-text' ); ?></strong> <?php esc_html_e( 'Scan your entire 10,000+ media library via WP-Cron / AJAX with zero timeouts.', 'forgehub-ai-alt-text' ); ?></li>
+                    <li>📷 <strong><?php esc_html_e( 'Instant Upload Hook:', 'forgehub-ai-alt-text' ); ?></strong> <?php esc_html_e( 'Automatically generates alt-text the exact second you upload a new photo.', 'forgehub-ai-alt-text' ); ?></li>
+                    <li>🛍️ <strong><?php esc_html_e( 'WooCommerce Context:', 'forgehub-ai-alt-text' ); ?></strong> <?php esc_html_e( 'Includes product title, SKU, and categories in product image alt tags.', 'forgehub-ai-alt-text' ); ?></li>
                 </ul>
                 <p>
                     <a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" class="button button-primary button-hero" target="_blank">
-                        <?php esc_html_e( 'Upgrade to Pro — Just $5/mo ($39 Lifetime)', 'wpfh-ai-alt-text' ); ?>
+                        <?php esc_html_e( 'Upgrade to Pro — Just $5/mo ($39 Lifetime)', 'forgehub-ai-alt-text' ); ?>
                     </a>
                 </p>
             </div>

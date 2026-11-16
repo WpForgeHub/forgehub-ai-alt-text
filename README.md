@@ -1,32 +1,37 @@
-# WPForgeHub AI Alt-Text & Image SEO Generator (BYOK)
+# AI Alt Text & Image SEO Generator
 
 <p align="center">
-  <img src="assets/wpfh-ai-alt-text-banner.png" alt="WPForgeHub AI Alt Text Banner" width="100%" style="border-radius: 12px;" />
+  <img src="assets/banner-1544x500.png" alt="AI Alt Text & Image SEO Generator banner" width="100%" />
 </p>
 
+[![License](https://img.shields.io/badge/License-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
+[![Version](https://img.shields.io/badge/Version-v1.1.2-purple.svg)](https://github.com/WpForgeHub/forgehub-ai-alt-text/releases/tag/v1.1.2)
+[![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4.svg)](https://php.net/)
+[![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-21759b.svg)](https://wordpress.org/)
+[![Tested](https://img.shields.io/badge/Tested-WP%207.1-brightgreen.svg)](https://wordpress.org/)
+[![wp.org](https://img.shields.io/badge/wp.org-pending%20review-orange.svg)](https://wordpress.org/plugins/)
+[![Freemius](https://img.shields.io/badge/Freemius-Pro%20available-0d9488.svg)](https://wpforgehub.com/)
+[![Architecture](https://img.shields.io/badge/Architecture-BYOK%20%7C%20Zero%20Bloat-06b6d4.svg)](https://wpforgehub.com/)
+[![WCAG](https://img.shields.io/badge/WCAG-2.1%20AA%20ready-2563eb.svg)](https://wpforgehub.com/)
+
+
 <p align="center">
-  <a href="https://github.com/WpForgeHub/wpfh-ai-alt-text/releases/latest/download/wpfh-ai-alt-text-1.1.0-free.zip">
-    <img src="https://img.shields.io/badge/📥_Download_Free_ZIP-v1.1.0-2563eb?style=for-the-badge&logo=wordpress&logoColor=white" alt="Download Free ZIP" />
+  <a href="https://github.com/WpForgeHub/forgehub-ai-alt-text/releases/latest/download/forgehub-ai-alt-text-free.zip">
+    <img src="https://img.shields.io/badge/📥_Download_Free_ZIP-v1.1.2-2563eb?style=for-the-badge&logo=wordpress&logoColor=white" alt="Download Free ZIP" />
   </a>
   <a href="https://wpforgehub.com/plugins/ai-alt-text/">
-    <img src="https://img.shields.io/badge/🌐_Plugin_Homepage-WPForgeHub-0f172a?style=for-the-badge" alt="WPForgeHub Plugin Page" />
+    <img src="https://img.shields.io/badge/🌐_Plugin_Homepage-WPForgeHub-0f172a?style=for-the-badge" alt="Plugin Page" />
   </a>
 </p>
 
-[![WordPress 6.0+](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg)](https://wordpress.org)
-[![Tested up to 6.7](https://img.shields.io/badge/Tested%20up%20to-6.7-brightgreen.svg)](https://wordpress.org)
-[![PHP 7.4-8.3](https://img.shields.io/badge/PHP-7.4%20--%208.3-green.svg)](https://php.net)
-[![License: GPL v2](https://img.shields.io/badge/License-GPLv2-orange.svg)](license.txt)
-[![Zero Bloat](https://img.shields.io/badge/Assets-%3C50KB-purple.svg)](https://wpforgehub.com)
-[![BYOK Architecture](https://img.shields.io/badge/Architecture-BYOK-cyan.svg)](https://wpforgehub.com)
 
 > ⚡ **Generate WCAG-compliant image Alt-Text, Titles, Captions, and Descriptions directly from your WordPress Media Library using your own AI API keys.**
 
 ---
 
-## 🌟 Why WPForgeHub AI Alt-Text?
+## 🌟 Why AI Alt Text?
 
-Most AI plugins for WordPress charge recurring middleman markup fees and route your images through external proxy servers. **WPForgeHub AI Alt-Text** changes the game with a 100% private **BYOK (Bring Your Own Key)** architecture:
+Most AI plugins for WordPress charge recurring middleman markup fees and route your images through external proxy servers. **AI Alt Text** changes the game with a 100% private **BYOK (Bring Your Own Key)** architecture:
 
 * **Zero Middleware:** Your server connects directly to your chosen AI provider using native WordPress APIs.
 * **Virtually Free Operations:** Use Google Gemini's generous free tier or OpenAI's GPT-4o-mini for fractions of a penny per image.
@@ -81,14 +86,14 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 ## 📦 Installation
 
 ### Option 1: Direct Download (Easiest)
-1. Download the latest release: [wpfh-ai-alt-text-1.0.0-free.zip](https://github.com/WpForgeHub/wpfh-ai-alt-text/releases/latest/download/wpfh-ai-alt-text-1.0.0-free.zip).
+1. Download the latest release: [forgehub-ai-alt-text-free.zip](https://github.com/WpForgeHub/forgehub-ai-alt-text/releases/latest/download/forgehub-ai-alt-text-free.zip).
 2. In your WordPress admin, navigate to **Plugins &rarr; Add New Plugin &rarr; Upload Plugin**.
 3. Choose the downloaded ZIP file and click **Install Now**, then **Activate**.
 
 ### Option 2: Clone via Git
 ```bash
 cd wp-content/plugins/
-git clone https://github.com/WpForgeHub/wpfh-ai-alt-text.git
+git clone https://github.com/WpForgeHub/forgehub-ai-alt-text.git
 ```
 
 ### Setup in 60 Seconds
