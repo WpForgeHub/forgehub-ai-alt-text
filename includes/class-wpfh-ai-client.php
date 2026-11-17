@@ -149,6 +149,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                     return self::call_claude_vision( $api_key, $model, $base64_image, $mime_type, $prompt );
 
                 case 'openrouter':
+                    // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- BYOK: user supplies own API key and chooses provider.
                     return self::call_openai_compatible_vision( 'https://openrouter.ai/api/v1', $api_key, $model, $base64_image, $mime_type, $prompt );
 
                 case 'custom':
@@ -170,6 +171,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                 $model = 'gemini-1.5-flash';
             }
 
+            // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- BYOK: user supplies own API key and chooses provider.
             $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . rawurlencode( $api_key );
 
             $payload = [
@@ -218,6 +220,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
          * Call OpenAI API (Vision)
          */
         private static function call_openai_vision( $api_key, $model, $base64_image, $mime_type, $prompt ) {
+            // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- BYOK: user supplies own API key and chooses provider.
             return self::call_openai_compatible_vision( 'https://api.openai.com/v1', $api_key, $model ?: 'gpt-4o-mini', $base64_image, $mime_type, $prompt );
         }
 
@@ -229,6 +232,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                 $model = 'claude-3-5-haiku-20241022';
             }
 
+            // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- BYOK: user supplies own API key and chooses provider.
             $url = 'https://api.anthropic.com/v1/messages';
 
             $payload = [
@@ -345,6 +349,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
 
             // If using deepseek-flash or vision-capable model, send OpenAI-compatible multimodal payload
             if ( false !== stripos( $model, 'flash' ) || false !== stripos( $model, 'vision' ) ) {
+                // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- BYOK: user supplies own API key and chooses provider.
                 return self::call_openai_compatible_vision( 'https://api.deepseek.com', $api_key, $model, $base64_image, $mime_type, $prompt );
             }
 
@@ -359,6 +364,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                 $clean_name
             );
 
+            // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- BYOK: user supplies own API key and chooses provider.
             $url = 'https://api.deepseek.com/chat/completions';
 
             $payload = [
@@ -501,7 +507,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
 
                 if ( ! is_wp_error( $saved ) && file_exists( $temp_path ) ) {
                     $data = file_get_contents( $temp_path );
-                    @unlink( $temp_path );
+                    wp_delete_file( $temp_path );
                     if ( false !== $data ) {
                         return [
                             'success'   => true,

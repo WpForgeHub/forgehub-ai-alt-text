@@ -15,7 +15,7 @@ class WPFH_AAT_Admin {
         add_action( 'admin_menu', [ __CLASS__, 'add_settings_menu' ] );
         add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
         add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
-        
+
         // Media Library Integration
         add_filter( 'attachment_fields_to_edit', [ __CLASS__, 'add_media_modal_button' ], 10, 2 );
         add_action( 'wp_ajax_wpfh_aat_generate_single', [ __CLASS__, 'ajax_generate_single' ] );
@@ -78,7 +78,7 @@ class WPFH_AAT_Admin {
         $clean = [];
         $clean['provider']        = sanitize_key( $input['provider'] ?? 'gemini' );
         $clean['api_key']         = trim( sanitize_text_field( $input['api_key'] ?? '' ) );
-        
+
         $model = sanitize_text_field( $input['model'] ?? '' );
         if ( 'custom' === $clean['provider'] && ! empty( $input['custom_model'] ) ) {
             $model = sanitize_text_field( $input['custom_model'] );
@@ -243,6 +243,7 @@ class WPFH_AAT_Admin {
             $parent_id = wp_get_post_parent_id( $attachment_id );
             if ( ! $parent_id ) {
                 global $wpdb;
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off lookup of the product that uses this attachment.
                 $parent_id = (int) $wpdb->get_var( $wpdb->prepare(
                     "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_thumbnail_id' AND meta_value = %d LIMIT 1",
                     $attachment_id
@@ -392,7 +393,7 @@ class WPFH_AAT_Admin {
             if ( ! empty( $settings['generate_desc'] ) )    $enabled_fields[] = 'description';
         }
 
-        $raw_over  = isset( $_POST['overwrite'] ) ? $_POST['overwrite'] : null;
+        $raw_over  = isset( $_POST['overwrite'] ) ? sanitize_text_field( wp_unslash( $_POST['overwrite'] ) ) : null;
         $overwrite = false;
         if ( null !== $raw_over ) {
             $overwrite = ( '1' === $raw_over || 1 === $raw_over || true === $raw_over || 'true' === $raw_over );
@@ -413,7 +414,7 @@ class WPFH_AAT_Admin {
      */
     public static function handle_auto_generate_on_upload( $attachment_id ) {
         $settings = self::get_settings();
-        
+
         // Gated: Pro Plan only
         if ( ! wpfh_aat_fs()->can_use_premium_code() || empty( $settings['auto_generate_upload'] ) ) {
             return;
@@ -442,13 +443,16 @@ class WPFH_AAT_Admin {
         }
 
         global $wpdb;
-        $total_images = (int) $wpdb->get_var( "SELECT COUNT(ID) FROM $wpdb->posts WHERE post_type = 'attachment' AND post_mime_type LIKE 'image/%'" );
-        $missing_alt  = (int) $wpdb->get_var( "
-            SELECT COUNT(p.ID) FROM $wpdb->posts p 
+        $image_like = $wpdb->esc_like( 'image/' ) . '%';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- live library statistics.
+        $total_images = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(ID) FROM $wpdb->posts WHERE post_type = 'attachment' AND post_mime_type LIKE %s", $image_like ) );
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- live library statistics.
+        $missing_alt  = (int) $wpdb->get_var( $wpdb->prepare( "
+            SELECT COUNT(p.ID) FROM $wpdb->posts p
             LEFT JOIN $wpdb->postmeta pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_attachment_image_alt'
-            WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE 'image/%' 
+            WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE %s
             AND (pm.meta_value IS NULL OR pm.meta_value = '')
-        " );
+        ", $image_like ) );
 
         wp_send_json_success( [
             'total_images' => $total_images,
@@ -477,13 +481,15 @@ class WPFH_AAT_Admin {
         $settings   = self::get_settings();
 
         // Get images missing alt text
+        $image_like = $wpdb->esc_like( 'image/' ) . '%';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- batch queue of images without alt text.
         $image_ids = $wpdb->get_col( $wpdb->prepare( "
-            SELECT p.ID FROM $wpdb->posts p 
+            SELECT p.ID FROM $wpdb->posts p
             LEFT JOIN $wpdb->postmeta pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_attachment_image_alt'
-            WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE 'image/%' 
+            WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE %s
             AND (pm.meta_value IS NULL OR pm.meta_value = '')
             LIMIT %d
-        ", $batch_size ) );
+        ", $image_like, $batch_size ) );
 
         $processed = 0;
         foreach ( $image_ids as $id ) {
@@ -493,12 +499,13 @@ class WPFH_AAT_Admin {
             }
         }
 
-        $remaining = (int) $wpdb->get_var( "
-            SELECT COUNT(p.ID) FROM $wpdb->posts p 
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- live progress counter.
+        $remaining = (int) $wpdb->get_var( $wpdb->prepare( "
+            SELECT COUNT(p.ID) FROM $wpdb->posts p
             LEFT JOIN $wpdb->postmeta pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_attachment_image_alt'
-            WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE 'image/%' 
+            WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE %s
             AND (pm.meta_value IS NULL OR pm.meta_value = '')
-        " );
+        ", $image_like ) );
 
         wp_send_json_success( [
             'batch_processed' => $processed,

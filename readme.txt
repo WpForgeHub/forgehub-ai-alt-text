@@ -1,9 +1,9 @@
-=== AI Alt Text & Image SEO Generator ===
+=== ForgeHub AI Alt Text ===
 Contributors: wpforgehub
 Tags: alt text, image seo, ai alt text, gemini, accessibility
 Requires at least: 6.0
 Tested up to: 7.1
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -56,6 +56,10 @@ Not at all. The plugin executes solely in the WordPress admin dashboard and medi
 
 == Changelog ==
 
+
+= 1.1.3 =
+* Rename: plugin is now "ForgeHub AI Alt Text" (ForgeHub naming standard).
+* Fix: Plugins screen now shows a consistent "Settings" link.
 = 1.1.2 =
 * Rename: plugin slug and text domain are now forgehub-ai-alt-text (WordPress.org naming rules).
 * Docs: README and readme.txt updated to the unified repository standard.
