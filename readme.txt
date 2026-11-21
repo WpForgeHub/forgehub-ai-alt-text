@@ -3,7 +3,7 @@ Contributors: wpforgehub
 Tags: alt text, image seo, ai alt text, gemini, accessibility
 Requires at least: 6.0
 Tested up to: 7.1
-Stable tag: 1.1.3
+Stable tag: 1.1.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -55,6 +55,9 @@ Yes. The default prompt instructs the AI vision models to produce concise, objec
 Not at all. The plugin executes solely in the WordPress admin dashboard and media modal when you choose to generate alt text. Zero scripts or stylesheets are loaded on your public frontend.
 
 == Changelog ==
+
+= 1.1.4 =
+* Fix Pro bulk scanner infinite loop with cursor + raster mime filter, add #wpfh_manual_model_wrap, update AI models, fix XSS & edit_post capability check.
 
 
 = 1.1.3 =
