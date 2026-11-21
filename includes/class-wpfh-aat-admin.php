@@ -380,6 +380,9 @@ class WPFH_AAT_Admin {
         }
 
         $attachment_id = isset( $_POST['attachment_id'] ) ? absint( $_POST['attachment_id'] ) : 0;
+        if ( ! $attachment_id || ! current_user_can( 'edit_post', $attachment_id ) ) {
+            wp_send_json_error( [ 'message' => __( 'Permission denied for this attachment.', 'forgehub-ai-alt-text' ) ] );
+        }
         $settings      = self::get_settings();
 
         if ( isset( $_POST['fields'] ) && is_array( $_POST['fields'] ) ) {
@@ -443,16 +446,18 @@ class WPFH_AAT_Admin {
         }
 
         global $wpdb;
-        $image_like = $wpdb->esc_like( 'image/' ) . '%';
+        // Count only vision-supported raster image formats (exclude SVG, GIF, ICO, etc.).
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- live library statistics.
-        $total_images = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(ID) FROM $wpdb->posts WHERE post_type = 'attachment' AND post_mime_type LIKE %s", $image_like ) );
+        $total_images = (int) $wpdb->get_var(
+            "SELECT COUNT(ID) FROM {$wpdb->posts} WHERE post_type = 'attachment' AND post_mime_type IN ('image/jpeg', 'image/jpg', 'image/png', 'image/webp')"
+        );
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- live library statistics.
-        $missing_alt  = (int) $wpdb->get_var( $wpdb->prepare( "
-            SELECT COUNT(p.ID) FROM $wpdb->posts p
-            LEFT JOIN $wpdb->postmeta pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_attachment_image_alt'
-            WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE %s
-            AND (pm.meta_value IS NULL OR pm.meta_value = '')
-        ", $image_like ) );
+        $missing_alt  = (int) $wpdb->get_var(
+            "SELECT COUNT(p.ID) FROM {$wpdb->posts} p
+            LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_attachment_image_alt'
+            WHERE p.post_type = 'attachment' AND p.post_mime_type IN ('image/jpeg', 'image/jpg', 'image/png', 'image/webp')
+            AND (pm.meta_value IS NULL OR pm.meta_value = '')"
+        );
 
         wp_send_json_success( [
             'total_images' => $total_images,
@@ -478,39 +483,65 @@ class WPFH_AAT_Admin {
 
         global $wpdb;
         $batch_size = 5;
+        $last_id    = isset( $_POST['last_id'] ) ? absint( $_POST['last_id'] ) : 0;
         $settings   = self::get_settings();
 
-        // Get images missing alt text
-        $image_like = $wpdb->esc_like( 'image/' ) . '%';
+        // Honor the admin's configured field toggles (always include alt_text as baseline for bulk).
+        $enabled_fields = [ 'alt_text' ];
+        if ( ! empty( $settings['generate_title'] ) ) {
+            $enabled_fields[] = 'title';
+        }
+        if ( ! empty( $settings['generate_caption'] ) ) {
+            $enabled_fields[] = 'caption';
+        }
+        if ( ! empty( $settings['generate_desc'] ) ) {
+            $enabled_fields[] = 'description';
+        }
+
+        // Cursor-based pagination over vision-supported images missing alt text so failed items never loop infinitely.
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- batch queue of images without alt text.
         $image_ids = $wpdb->get_col( $wpdb->prepare( "
-            SELECT p.ID FROM $wpdb->posts p
-            LEFT JOIN $wpdb->postmeta pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_attachment_image_alt'
-            WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE %s
+            SELECT p.ID FROM {$wpdb->posts} p
+            LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_attachment_image_alt'
+            WHERE p.post_type = 'attachment'
+            AND p.post_mime_type IN ('image/jpeg', 'image/jpg', 'image/png', 'image/webp')
             AND (pm.meta_value IS NULL OR pm.meta_value = '')
+            AND p.ID > %d
+            ORDER BY p.ID ASC
             LIMIT %d
-        ", $image_like, $batch_size ) );
+        ", $last_id, $batch_size ) );
 
-        $processed = 0;
+        $processed  = 0;
+        $failed     = 0;
+        $new_last   = $last_id;
         foreach ( $image_ids as $id ) {
-            $res = self::process_attachment_ai( (int) $id, [ 'alt_text', 'title' ], false );
+            $int_id   = (int) $id;
+            $new_last = max( $new_last, $int_id );
+            $res      = self::process_attachment_ai( $int_id, $enabled_fields, false );
             if ( $res['success'] ) {
                 $processed++;
+            } else {
+                $failed++;
             }
         }
 
+        // Count remaining images strictly after the cursor.
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- live progress counter.
         $remaining = (int) $wpdb->get_var( $wpdb->prepare( "
-            SELECT COUNT(p.ID) FROM $wpdb->posts p
-            LEFT JOIN $wpdb->postmeta pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_attachment_image_alt'
-            WHERE p.post_type = 'attachment' AND p.post_mime_type LIKE %s
+            SELECT COUNT(p.ID) FROM {$wpdb->posts} p
+            LEFT JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = '_wp_attachment_image_alt'
+            WHERE p.post_type = 'attachment'
+            AND p.post_mime_type IN ('image/jpeg', 'image/jpg', 'image/png', 'image/webp')
             AND (pm.meta_value IS NULL OR pm.meta_value = '')
-        ", $image_like ) );
+            AND p.ID > %d
+        ", $new_last ) );
 
         wp_send_json_success( [
             'batch_processed' => $processed,
+            'batch_failed'    => $failed,
+            'last_id'         => $new_last,
             'remaining'       => $remaining,
-            'is_finished'     => ( 0 === $remaining ),
+            'is_finished'     => ( empty( $image_ids ) || 0 === $remaining ),
         ] );
     }
 
@@ -592,7 +623,9 @@ class WPFH_AAT_Admin {
                                             </button>
                                         </div>
 
-                                        <input name="wpfh_aat_settings[model]" type="text" id="wpfh_model_input" value="<?php echo esc_attr( $saved_model ); ?>" class="regular-text" style="margin-top:8px;<?php echo $show_manual ? 'display:block;' : 'display:none;'; ?>" placeholder="e.g. gpt-4o, claude-3-5-sonnet, deepseek-chat" />
+                                        <div id="wpfh_manual_model_wrap" style="margin-top:8px;<?php echo $show_manual ? '' : 'display:none;'; ?>">
+                                            <input name="wpfh_aat_settings[model]" type="text" id="wpfh_model_input" value="<?php echo esc_attr( $saved_model ); ?>" class="regular-text" placeholder="e.g. gpt-4o, gemini-2.5-flash, claude-sonnet-4-20250514" />
+                                        </div>
                                     </div>
                                     <p class="description">
                                         <?php esc_html_e( 'Flash models are ultra-fast and cost-effective; Pro models provide maximum reasoning depth.', 'forgehub-ai-alt-text' ); ?>

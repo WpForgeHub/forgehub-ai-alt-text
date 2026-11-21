@@ -31,11 +31,11 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
             return [
                 'gemini' => [
                     'label'         => 'Google Gemini (Vision)',
-                    'default_model' => 'gemini-1.5-flash',
+                    'default_model' => 'gemini-2.5-flash',
                     'models'        => [
-                        'gemini-1.5-flash' => 'Gemini 1.5 Flash (Ultra-Fast & Free Tier)',
-                        'gemini-2.0-flash' => 'Gemini 2.0 Flash (Next-Gen Multimodal)',
-                        'gemini-1.5-pro'   => 'Gemini 1.5 Pro (Deep Reasoning & High Accuracy)',
+                        'gemini-2.5-flash' => 'Gemini 2.5 Flash (Fast & Cost-Effective Multimodal)',
+                        'gemini-2.0-flash' => 'Gemini 2.0 Flash (Multimodal Vision)',
+                        'gemini-2.5-pro'   => 'Gemini 2.5 Pro (High-Accuracy Vision & Reasoning)',
                     ],
                     'supports_vision' => true,
                 ],
@@ -43,45 +43,44 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                     'label'         => 'OpenAI (Vision)',
                     'default_model' => 'gpt-4o-mini',
                     'models'        => [
-                        'gpt-4o-mini' => 'GPT-4o Mini (Fast & Cost-Effective Vision)',
-                        'gpt-4o'      => 'GPT-4o (Flagship High-Precision Vision)',
+                        'gpt-4o-mini'  => 'GPT-4o Mini (Fast & Cost-Effective Vision)',
+                        'gpt-4.1-mini' => 'GPT-4.1 Mini (Modern Vision)',
+                        'gpt-4o'       => 'GPT-4o (Flagship High-Precision Vision)',
                     ],
                     'supports_vision' => true,
                 ],
                 'deepseek' => [
-                    'label'         => 'DeepSeek (Flash Vision & Pro Reasoning)',
-                    'default_model' => 'deepseek-flash',
+                    'label'         => 'DeepSeek (Filename & Context SEO)',
+                    'default_model' => 'deepseek-chat',
                     'models'        => [
-                        'deepseek-flash'    => 'DeepSeek Flash (Native Multimodal Vision & Ultra Fast)',
-                        'deepseek-v4-pro'   => 'DeepSeek-V4 Pro (Heavy Deep Reasoning)',
-                        'deepseek-chat'     => 'DeepSeek-V3 / Chat (General Fast Model)',
-                        'deepseek-reasoner' => 'DeepSeek-R1 / Reasoner (Chain-of-Thought Reasoning)',
+                        'deepseek-chat'     => 'DeepSeek-V3 / Chat (Fast General Model)',
+                        'deepseek-reasoner' => 'DeepSeek-R1 / Reasoner (Deep Reasoning)',
                     ],
-                    'supports_vision' => true,
+                    'supports_vision' => false,
                 ],
                 'claude' => [
                     'label'         => 'Anthropic Claude (Vision)',
-                    'default_model' => 'claude-3-5-haiku-20241022',
+                    'default_model' => 'claude-sonnet-4-20250514',
                     'models'        => [
-                        'claude-3-5-haiku-20241022'  => 'Claude 3.5 Haiku (Fast & Lightweight)',
-                        'claude-3-5-sonnet-20241022' => 'Claude 3.5 Sonnet (State-of-the-Art Vision)',
+                        'claude-sonnet-4-20250514' => 'Claude Sonnet 4 (High-Precision Vision)',
+                        'claude-3-5-haiku-latest'  => 'Claude 3.5 Haiku (Fast & Lightweight)',
                     ],
                     'supports_vision' => true,
                 ],
                 'openrouter' => [
                     'label'           => 'OpenRouter (Multi-Provider Gateway)',
-                    'default_model'   => 'google/gemini-flash-1.5',
+                    'default_model'   => 'google/gemini-2.5-flash',
                     'models'          => [
-                        'google/gemini-flash-1.5'     => 'Google Gemini 1.5 Flash (via OpenRouter)',
-                        'openai/gpt-4o-mini'          => 'OpenAI GPT-4o Mini (via OpenRouter)',
-                        'anthropic/claude-3.5-sonnet' => 'Claude 3.5 Sonnet (via OpenRouter)',
-                        'deepseek/deepseek-chat'      => 'DeepSeek-V3 (via OpenRouter)',
+                        'google/gemini-2.5-flash'  => 'Google Gemini 2.5 Flash (via OpenRouter)',
+                        'openai/gpt-4o-mini'       => 'OpenAI GPT-4o Mini (via OpenRouter)',
+                        'anthropic/claude-sonnet-4'=> 'Claude Sonnet 4 (via OpenRouter)',
+                        'deepseek/deepseek-chat'   => 'DeepSeek-V3 (via OpenRouter)',
                     ],
                     'supports_vision' => true,
                 ],
                 'custom' => [
                     'label'           => 'Custom / Local (Ollama, Groq, vLLM)',
-                    'default_model'   => 'llama-3.3-70b-versatile',
+                    'default_model'   => 'llava',
                     'models'          => [],
                     'supports_vision' => true,
                 ],
@@ -153,7 +152,13 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                     return self::call_openai_compatible_vision( 'https://openrouter.ai/api/v1', $api_key, $model, $base64_image, $mime_type, $prompt );
 
                 case 'custom':
-                    return self::call_openai_compatible_vision( $custom_endpoint, $api_key, $model, $base64_image, $mime_type, $prompt );
+                    if ( empty( $custom_endpoint ) ) {
+                        return [
+                            'success' => false,
+                            'error'   => __( 'Custom Base URL is missing. Please configure your OpenAI-compatible endpoint URL in settings.', 'forgehub-ai-alt-text' ),
+                        ];
+                    }
+                    return self::call_openai_compatible_vision( $custom_endpoint, $api_key, $model, $base64_image, $mime_type, $prompt, false );
 
                 default:
                     return [
@@ -168,7 +173,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
          */
         private static function call_gemini_vision( $api_key, $model, $base64_image, $mime_type, $prompt ) {
             if ( empty( $model ) ) {
-                $model = 'gemini-1.5-flash';
+                $model = 'gemini-2.5-flash';
             }
 
             // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- BYOK: user supplies own API key and chooses provider.
@@ -229,7 +234,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
          */
         private static function call_claude_vision( $api_key, $model, $base64_image, $mime_type, $prompt ) {
             if ( empty( $model ) ) {
-                $model = 'claude-3-5-haiku-20241022';
+                $model = 'claude-sonnet-4-20250514';
             }
 
             // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- BYOK: user supplies own API key and chooses provider.
@@ -288,7 +293,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
         /**
          * Generic OpenAI-compatible Vision Endpoint (OpenAI, OpenRouter, Groq, Ollama)
          */
-        private static function call_openai_compatible_vision( $base_url, $api_key, $model, $base64_image, $mime_type, $prompt ) {
+        private static function call_openai_compatible_vision( $base_url, $api_key, $model, $base64_image, $mime_type, $prompt, $use_json_format = true ) {
             $url = rtrim( $base_url, '/' ) . '/chat/completions';
 
             $payload = [
@@ -310,9 +315,12 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
                         ],
                     ],
                 ],
-                'response_format' => [ 'type' => 'json_object' ],
-                'max_tokens'      => 600,
+                'max_tokens' => 600,
             ];
+
+            if ( $use_json_format ) {
+                $payload['response_format'] = [ 'type' => 'json_object' ];
+            }
 
             $headers = [ 'Content-Type' => 'application/json' ];
             if ( ! empty( $api_key ) ) {
@@ -345,7 +353,7 @@ if ( ! class_exists( 'WPFH_AI_Client' ) ) {
          * Call DeepSeek API (Vision for deepseek-flash / Text Context for Pro & Chat)
          */
         private static function call_deepseek( $api_key, $model, $image_path, $base64_image, $mime_type, $prompt ) {
-            $model = $model ?: 'deepseek-flash';
+            $model = $model ?: 'deepseek-chat';
 
             // If using deepseek-flash or vision-capable model, send OpenAI-compatible multimodal payload
             if ( false !== stripos( $model, 'flash' ) || false !== stripos( $model, 'vision' ) ) {

@@ -302,7 +302,7 @@
                         }, 3500);
                     } else {
                         var errMsg = (response.data && response.data.message) ? response.data.message : wpfhAatData.i18n.error;
-                        $status.removeClass('is-loading').addClass('is-error').html(errMsg);
+                        $status.removeClass('is-loading').addClass('is-error').text(errMsg);
                     }
                 },
                 error: function(xhr, status, error) {
@@ -317,7 +317,7 @@
                     } else {
                         detail = 'HTTP ' + xhr.status;
                     }
-                    $status.removeClass('is-loading').addClass('is-error').html(wpfhAatData.i18n.error + ' (' + detail + ')');
+                    $status.removeClass('is-loading').addClass('is-error').text(wpfhAatData.i18n.error + ' (' + detail + ')');
                 }
             });
         });
@@ -326,6 +326,7 @@
         // 3. Pro Feature: Background Bulk Scanner Client
         // =========================================================================
         var $bulkStatsLabel = $('#wpfh-bulk-stats-label');
+        var initialMissing = 0;
         if ($bulkStatsLabel.length && typeof wpfhAatData !== 'undefined') {
             $.post(wpfhAatData.ajax_url, {
                 action: 'wpfh_aat_bulk_get_stats',
@@ -333,6 +334,7 @@
             }, function(res) {
                 if (res.success && res.data) {
                     var d = res.data;
+                    initialMissing = parseInt(d.missing_alt, 10) || 0;
                     $bulkStatsLabel.text('Total Images: ' + d.total_images + ' | Missing Alt: ' + d.missing_alt);
                     if (d.missing_alt === 0) {
                         $('#wpfh-bulk-status-msg').text('🎉 All images in library have Alt-Text!').css('color', '#10b981');
@@ -347,25 +349,40 @@
             var $progressWrap = $('#wpfh-bulk-progress-wrap');
             var $progressBar  = $('#wpfh-bulk-progress-bar');
             var $statusMsg    = $('#wpfh-bulk-status-msg');
+            var lastId = 0;
+            var totalProcessed = 0;
+            var totalFailed = 0;
 
             $btn.prop('disabled', true).text('⏳ Processing Batch...');
             $progressWrap.show();
+            $progressBar.css('width', '0%');
             $statusMsg.text('Processing images with Vision AI...').css('color', '#2563eb');
 
             function runBatch() {
                 $.post(wpfhAatData.ajax_url, {
                     action: 'wpfh_aat_bulk_process_batch',
-                    security: wpfhAatData.nonce
+                    security: wpfhAatData.nonce,
+                    last_id: lastId
                 }, function(res) {
                     if (res.success && res.data) {
                         var d = res.data;
-                        if (d.is_finished) {
+                        var nextLastId = parseInt(d.last_id, 10) || lastId;
+                        totalProcessed += parseInt(d.batch_processed, 10) || 0;
+                        totalFailed += parseInt(d.batch_failed, 10) || 0;
+                        var handled = totalProcessed + totalFailed;
+                        var denom = initialMissing > 0 ? initialMissing : (handled + (parseInt(d.remaining, 10) || 0));
+                        var pct = denom > 0 ? Math.min(100, Math.round((handled / denom) * 100)) : 100;
+                        $progressBar.css('width', pct + '%');
+
+                        if (d.is_finished || nextLastId <= lastId) {
                             $progressBar.css('width', '100%');
                             $btn.prop('disabled', false).text('✅ Scan Complete');
-                            $statusMsg.text('🎉 All missing alt-texts successfully generated!').css('color', '#10b981');
-                            $bulkStatsLabel.text('Missing Alt: 0 images');
+                            var doneText = '🎉 Bulk scan complete: ' + totalProcessed + ' generated' + (totalFailed > 0 ? ', ' + totalFailed + ' skipped/failed.' : '!');
+                            $statusMsg.text(doneText).css('color', '#10b981');
+                            $bulkStatsLabel.text('Processed: ' + totalProcessed + (totalFailed > 0 ? ' | Skipped: ' + totalFailed : ''));
                         } else {
-                            $statusMsg.text('Remaining to process: ' + d.remaining + ' images...');
+                            lastId = nextLastId;
+                            $statusMsg.text('Processed: ' + totalProcessed + (totalFailed > 0 ? ' (Skipped: ' + totalFailed + ')' : '') + ' | Remaining: ' + d.remaining + ' (' + pct + '%)');
                             runBatch(); // Next chunk
                         }
                     } else {
