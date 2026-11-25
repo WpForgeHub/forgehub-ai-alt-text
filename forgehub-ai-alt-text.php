@@ -3,7 +3,7 @@
  * Plugin Name:       ForgeHub AI Alt Text
  * Plugin URI:        https://wpforgehub.com/plugins/ai-alt-text/
  * Description:       Generate WCAG-compliant image Alt-Text and SEO titles using your own Google Gemini, OpenAI, Claude, DeepSeek, or OpenRouter API key (BYOK).
- * Version:           1.1.4
+ * Version:           1.1.5
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            WPForgeHub
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Version & Path Constants
-define( 'WPFH_AAT_VERSION', '1.1.4' );
+define( 'WPFH_AAT_VERSION', '1.1.5' );
 define( 'WPFH_AAT_FILE', __FILE__ );
 define( 'WPFH_AAT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WPFH_AAT_URL', plugin_dir_url( __FILE__ ) );
@@ -59,7 +59,7 @@ if ( ! function_exists( 'wpfh_aat_fs' ) ) {
                     public function is__premium_only() { return $this->is_pro; }
                     public function can_use_premium_code() { return $this->is_pro; }
                     public function is_plan( $plan ) { return $this->is_pro; }
-                    public function get_upgrade_url() { return 'https://wpforgehub.com/upgrade/ai-alt-text/?utm_source=plugin_admin&utm_medium=upgrade_btn'; }
+                    public function get_upgrade_url() { return 'https://wpforgehub.com/product/ai-alt-text/#pricing'; }
                 };
             }
         }
