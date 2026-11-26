@@ -362,7 +362,8 @@
                 $.post(wpfhAatData.ajax_url, {
                     action: 'wpfh_aat_bulk_process_batch',
                     security: wpfhAatData.nonce,
-                    last_id: lastId
+                    last_id: lastId,
+                    processed_so_far: totalProcessed + totalFailed
                 }, function(res) {
                     if (res.success && res.data) {
                         var d = res.data;
@@ -374,7 +375,12 @@
                         var pct = denom > 0 ? Math.min(100, Math.round((handled / denom) * 100)) : 100;
                         $progressBar.css('width', pct + '%');
 
-                        if (d.is_finished || nextLastId <= lastId) {
+                        if (d.free_cap_hit) {
+                            $btn.prop('disabled', false).text('🚀 Run Next Batch');
+                            var capText = '✅ Batch complete: ' + totalProcessed + ' generated' + (totalFailed > 0 ? ', ' + totalFailed + ' skipped' : '') + ' (' + d.remaining + ' remaining — click Run Next Batch to continue).';
+                            $statusMsg.text(capText).css('color', '#10b981');
+                            $bulkStatsLabel.text('Processed: ' + totalProcessed + ' | Remaining: ' + d.remaining);
+                        } else if (d.is_finished || nextLastId <= lastId) {
                             $progressBar.css('width', '100%');
                             $btn.prop('disabled', false).text('✅ Scan Complete');
                             var doneText = '🎉 Bulk scan complete: ' + totalProcessed + ' generated' + (totalFailed > 0 ? ', ' + totalFailed + ' skipped/failed.' : '!');

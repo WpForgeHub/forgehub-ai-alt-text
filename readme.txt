@@ -3,7 +3,7 @@ Contributors: wpforgehub
 Tags: alt text, image seo, ai alt text, gemini, accessibility
 Requires at least: 6.0
 Tested up to: 7.1
-Stable tag: 1.1.5
+Stable tag: 1.2.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -25,6 +25,7 @@ Unlike traditional SaaS plugins that lock your data into expensive third-party s
   * **OpenRouter:** Access 100+ open-source models with a single API key.
   * **Custom OpenAI-Compatible Endpoint:** Connect local Ollama, vLLM, Groq, or xAI.
 * **1-Click Generation in Media Library:** Adds a dedicated "Generate with AI" button inside the standard WordPress attachment modal and edit media screens.
+* **Bulk Alt-Text Scanner (Free):** Scan images missing Alt-Text in batches of up to 20 images per run directly from Settings.
 * **Multi-Language Support:** Generate alt-text in English, Turkish, German, Spanish, French, Italian, and more.
 * **Brand & Niche Context:** Provide custom guidance (e.g., "e-commerce shoe store") to produce domain-specific keywords.
 * **Zero Bloat & Zero External CDN:** Pure vanilla JavaScript and native WordPress APIs. Under 50 KB total footprint.
@@ -55,6 +56,11 @@ Yes. The default prompt instructs the AI vision models to produce concise, objec
 Not at all. The plugin executes solely in the WordPress admin dashboard and media modal when you choose to generate alt text. Zero scripts or stylesheets are loaded on your public frontend.
 
 == Changelog ==
+
+= 1.2.0 =
+* Free-First & Zero-Nag: Removed aggressive Pro upgrade banner, hardcoded pricing text, and locked buttons from wp-admin.
+* Feature: Opened batch bulk scanning (up to 20 images per run) in the Free core; unlimited background queue remains in Pro.
+* Feature: Added Value-Moment 5-star review & GitHub Star nudge (hidden on Day 0, one-click permanent dismiss).
 
 = 1.1.5 =
 * Standardize Upgrade to Pro links to canonical `#pricing` product URL.

@@ -11,6 +11,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class WPFH_AAT_Admin {
 
+    /**
+     * Value-moment review nudge instance.
+     *
+     * @var WPFH_Review_Nudge|null
+     */
+    private static $review_nudge = null;
+
+    /**
+     * Get or initialize the Value-Moment review nudge component.
+     *
+     * @return WPFH_Review_Nudge|null
+     */
+    public static function get_review_nudge() {
+        if ( null === self::$review_nudge && class_exists( 'WPFH_Review_Nudge' ) ) {
+            self::$review_nudge = new WPFH_Review_Nudge( [
+                'plugin_slug'   => 'forgehub-ai-alt-text',
+                'plugin_name'   => 'ForgeHub AI Alt Text',
+                'option_prefix' => 'wpfh_aat',
+                'github_url'    => 'https://github.com/WpForgeHub/forgehub-ai-alt-text',
+                'min_actions'   => 5,
+                'min_days'      => 7,
+                'trigger_mode'  => 'or',
+                'screens'       => [ 'settings_page_forgehub-ai-alt-text', 'upload' ],
+                'strings'       => [
+                    'heading'     => __( 'Enjoying ForgeHub AI Alt Text?', 'forgehub-ai-alt-text' ),
+                    'message'     => __( 'If ForgeHub AI Alt Text has saved you time writing alt text, a quick 5-star review helps other site owners discover it and keeps development active.', 'forgehub-ai-alt-text' ),
+                    'rate_cta'    => __( 'Rate 5 Stars on WordPress.org', 'forgehub-ai-alt-text' ),
+                    'github_cta'  => __( 'Star on GitHub', 'forgehub-ai-alt-text' ),
+                    'later_cta'   => __( 'Maybe later', 'forgehub-ai-alt-text' ),
+                    'dismiss_cta' => __( 'Already did / Dismiss', 'forgehub-ai-alt-text' ),
+                ],
+            ] );
+        }
+        return self::$review_nudge;
+    }
+
     public static function init() {
         add_action( 'admin_menu', [ __CLASS__, 'add_settings_menu' ] );
         add_action( 'admin_init', [ __CLASS__, 'register_settings' ] );
@@ -23,9 +59,15 @@ class WPFH_AAT_Admin {
         // Pro Feature: Instant Auto-Generate on Upload Hook
         add_action( 'add_attachment', [ __CLASS__, 'handle_auto_generate_on_upload' ] );
 
-        // Pro Feature: Bulk Scanner AJAX Endpoints
+        // Bulk Scanner AJAX Endpoints (Free up to 20 images/run, Pro unlimited)
         add_action( 'wp_ajax_wpfh_aat_bulk_get_stats', [ __CLASS__, 'ajax_bulk_get_stats' ] );
         add_action( 'wp_ajax_wpfh_aat_bulk_process_batch', [ __CLASS__, 'ajax_bulk_process_batch' ] );
+
+        // Value-Moment Review & GitHub Star Nudge (Day-0 silent, one-click permanent dismiss)
+        $nudge = self::get_review_nudge();
+        if ( $nudge ) {
+            $nudge->register();
+        }
     }
 
     /**
@@ -295,6 +337,10 @@ class WPFH_AAT_Admin {
 
         $result = WPFH_AI_Client::analyze_image( $settings, $file_path, $prompt, $settings['language'] );
         if ( ! $result['success'] ) {
+            $nudge = self::get_review_nudge();
+            if ( $nudge ) {
+                $nudge->record_error();
+            }
             return $result;
         }
 
@@ -364,6 +410,13 @@ class WPFH_AAT_Admin {
             wp_update_post( $post_updates );
         }
 
+        if ( ! empty( $response_data['updated'] ) ) {
+            $nudge = self::get_review_nudge();
+            if ( $nudge ) {
+                $nudge->record_success();
+            }
+        }
+
         return [ 'success' => true, 'data' => $response_data ];
     }
 
@@ -406,6 +459,9 @@ class WPFH_AAT_Admin {
 
         $result = self::process_attachment_ai( $attachment_id, $enabled_fields, $overwrite );
         if ( $result['success'] ) {
+            if ( class_exists( 'WPFH_Review_Nudge' ) ) {
+                WPFH_Review_Nudge::track_success( 'wpfh_aat', 1 );
+            }
             wp_send_json_success( $result['data'] );
         } else {
             wp_send_json_error( [ 'message' => $result['error'] ] );
@@ -476,13 +532,27 @@ class WPFH_AAT_Admin {
             wp_send_json_error( [ 'message' => 'Permission denied' ] );
         }
 
-        // Gated: Pro Plan only
-        if ( ! wpfh_aat_fs()->can_use_premium_code() ) {
-            wp_send_json_error( [ 'message' => __( 'Bulk Generation is a Pro feature. Please upgrade to unlock unlimited bulk processing.', 'forgehub-ai-alt-text' ) ] );
-        }
+        // Free allows up to 20 images per bulk run; Pro runs unlimited background queues.
+        $is_pro            = wpfh_aat_fs()->can_use_premium_code();
+        $session_processed = isset( $_POST['session_processed'] ) ? absint( $_POST['session_processed'] ) : 0;
+        $free_run_limit    = 20;
 
         global $wpdb;
         $batch_size = 5;
+        if ( ! $is_pro ) {
+            $remaining_free = max( 0, $free_run_limit - $session_processed );
+            if ( 0 === $remaining_free ) {
+                wp_send_json_success( [
+                    'batch_processed' => 0,
+                    'batch_failed'    => 0,
+                    'last_id'         => isset( $_POST['last_id'] ) ? absint( $_POST['last_id'] ) : 0,
+                    'remaining'       => 0,
+                    'free_cap_hit'    => true,
+                    'is_finished'     => true,
+                ] );
+            }
+            $batch_size = min( $batch_size, $remaining_free );
+        }
         $last_id    = isset( $_POST['last_id'] ) ? absint( $_POST['last_id'] ) : 0;
         $settings   = self::get_settings();
 
@@ -536,12 +606,19 @@ class WPFH_AAT_Admin {
             AND p.ID > %d
         ", $new_last ) );
 
+        if ( $processed > 0 && class_exists( 'WPFH_Review_Nudge' ) ) {
+            WPFH_Review_Nudge::track_success( 'wpfh_aat', $processed );
+        }
+
+        $reached_free_cap = ( ! $is_pro && ( $session_processed + $processed + $failed ) >= $free_run_limit );
+
         wp_send_json_success( [
             'batch_processed' => $processed,
             'batch_failed'    => $failed,
             'last_id'         => $new_last,
             'remaining'       => $remaining,
-            'is_finished'     => ( empty( $image_ids ) || 0 === $remaining ),
+            'is_finished'     => ( empty( $image_ids ) || 0 === $remaining || $reached_free_cap ),
+            'free_cap_hit'    => ( $reached_free_cap && $remaining > 0 ),
         ] );
     }
 
@@ -692,50 +769,52 @@ class WPFH_AAT_Admin {
                                 </td>
                             </tr>
 
+                            <?php if ( $is_pro ) : ?>
                             <!-- PRO AUTOMATION SECTION -->
                             <tr style="border-top:1px solid #e2e8f0;">
                                 <th scope="row">
-                                    <span style="display:inline-flex;align-items:center;gap:6px;">
-                                        <?php esc_html_e( 'Pro Automation', 'forgehub-ai-alt-text' ); ?>
-                                        <span style="background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;">PRO</span>
-                                    </span>
+                                    <?php esc_html_e( 'Automation & WooCommerce', 'forgehub-ai-alt-text' ); ?>
                                 </th>
                                 <td>
                                     <label for="wpfh_auto_upload" style="display:block;margin-bottom:10px;">
-                                        <input name="wpfh_aat_settings[auto_generate_upload]" type="checkbox" id="wpfh_auto_upload" value="1" <?php checked( $settings['auto_generate_upload'], 1 ); ?> <?php echo $is_pro ? '' : 'disabled="disabled"'; ?> />
+                                        <input name="wpfh_aat_settings[auto_generate_upload]" type="checkbox" id="wpfh_auto_upload" value="1" <?php checked( $settings['auto_generate_upload'], 1 ); ?> />
                                         <strong>📷 <?php esc_html_e( 'Instant Auto-Generate on Upload', 'forgehub-ai-alt-text' ); ?></strong>
-                                        <span class="description" style="display:block;margin-left:24px;color:#64748b;">
+                                        <span class="description" style="display:block;margin-left:24px;color:#50575e;">
                                             <?php esc_html_e( 'Automatically analyzes and saves Alt Text the exact second an image is uploaded to WordPress.', 'forgehub-ai-alt-text' ); ?>
-                                            <?php if ( ! $is_pro ) : ?><a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" target="_blank" style="color:#2563eb;font-weight:600;"><?php esc_html_e( 'Unlock with Pro', 'forgehub-ai-alt-text' ); ?> &rarr;</a><?php endif; ?>
                                         </span>
                                     </label>
 
                                     <label for="wpfh_enable_woo" style="display:block;">
-                                        <input name="wpfh_aat_settings[enable_woo_context]" type="checkbox" id="wpfh_enable_woo" value="1" <?php checked( $settings['enable_woo_context'], 1 ); ?> <?php echo $is_pro ? '' : 'disabled="disabled"'; ?> />
+                                        <input name="wpfh_aat_settings[enable_woo_context]" type="checkbox" id="wpfh_enable_woo" value="1" <?php checked( $settings['enable_woo_context'], 1 ); ?> />
                                         <strong>🛍️ <?php esc_html_e( 'WooCommerce Product Context Injection', 'forgehub-ai-alt-text' ); ?></strong>
-                                        <span class="description" style="display:block;margin-left:24px;color:#64748b;">
+                                        <span class="description" style="display:block;margin-left:24px;color:#50575e;">
                                             <?php esc_html_e( 'Enriches alt text with WooCommerce product title, SKU code, and category keywords.', 'forgehub-ai-alt-text' ); ?>
-                                            <?php if ( ! $is_pro ) : ?><a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" target="_blank" style="color:#2563eb;font-weight:600;"><?php esc_html_e( 'Unlock with Pro', 'forgehub-ai-alt-text' ); ?> &rarr;</a><?php endif; ?>
                                         </span>
                                     </label>
                                 </td>
                             </tr>
+                            <?php endif; ?>
                         </table>
 
                         <?php submit_button(); ?>
                     </form>
 
-                    <!-- PRO FEATURE: BACKGROUND BULK SCANNER DASHBOARD -->
+                    <!-- BULK SCANNER DASHBOARD -->
                     <div class="wpfh-aat-bulk-panel" style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;padding:20px;margin-top:24px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
                             <div style="display:flex;align-items:center;gap:8px;">
-                                <h3 style="margin:0;font-size:16px;color:#0f172a;">⚡ <?php esc_html_e( 'Background Bulk Scanner', 'forgehub-ai-alt-text' ); ?></h3>
-                                <span style="background:#2563eb;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;">PRO</span>
+                                <h3 style="margin:0;font-size:16px;color:#0f172a;">⚡ <?php esc_html_e( 'Bulk Alt-Text Scanner', 'forgehub-ai-alt-text' ); ?></h3>
                             </div>
-                            <span id="wpfh-bulk-stats-label" style="font-size:13px;color:#64748b;"><?php esc_html_e( 'Calculating media stats...', 'forgehub-ai-alt-text' ); ?></span>
+                            <span id="wpfh-bulk-stats-label" style="font-size:13px;color:#475569;"><?php esc_html_e( 'Calculating media stats...', 'forgehub-ai-alt-text' ); ?></span>
                         </div>
                         <p style="font-size:13px;color:#475569;margin-bottom:16px;">
-                            <?php esc_html_e( 'Scans your entire media library in asynchronous chunks with zero timeouts and automatically fills missing Alt-Text.', 'forgehub-ai-alt-text' ); ?>
+                            <?php
+                            if ( $is_pro ) {
+                                esc_html_e( 'Scans your entire media library in asynchronous chunks with zero timeouts and automatically fills missing Alt-Text.', 'forgehub-ai-alt-text' );
+                            } else {
+                                esc_html_e( 'Scans images missing Alt-Text in batches of up to 20 images per run with zero timeouts.', 'forgehub-ai-alt-text' );
+                            }
+                            ?>
                         </p>
 
                         <div id="wpfh-bulk-progress-wrap" style="display:none;background:#e2e8f0;border-radius:8px;overflow:hidden;height:12px;margin-bottom:14px;">
@@ -743,15 +822,9 @@ class WPFH_AAT_Admin {
                         </div>
 
                         <div style="display:flex;align-items:center;gap:12px;">
-                            <?php if ( $is_pro ) : ?>
-                                <button type="button" id="wpfh-start-bulk-btn" class="button button-primary">
-                                    🚀 <?php esc_html_e( 'Start Bulk AI Scan', 'forgehub-ai-alt-text' ); ?>
-                                </button>
-                            <?php else : ?>
-                                <a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" class="button button-primary" target="_blank">
-                                    🔒 <?php esc_html_e( 'Upgrade to Pro to Run Bulk Scan', 'forgehub-ai-alt-text' ); ?>
-                                </a>
-                            <?php endif; ?>
+                            <button type="button" id="wpfh-start-bulk-btn" class="button button-primary">
+                                🚀 <?php esc_html_e( 'Start Bulk AI Scan', 'forgehub-ai-alt-text' ); ?>
+                            </button>
                             <span id="wpfh-bulk-status-msg" style="font-size:13px;font-weight:600;color:#0f172a;"></span>
                         </div>
                     </div>
@@ -771,8 +844,8 @@ class WPFH_AAT_Admin {
                                 <span><?php esc_html_e( 'Open any image in Media Library, choose fields (Alt, Title, Caption, Desc), and click "Generate with AI".', 'forgehub-ai-alt-text' ); ?></span>
                             </li>
                             <li>
-                                <strong><?php esc_html_e( 'Pro Auto-Upload & Bulk Scan:', 'forgehub-ai-alt-text' ); ?></strong>
-                                <span><?php esc_html_e( 'Upgrade to Pro to automatically generate alt text on upload and scan 10,000+ images in the background.', 'forgehub-ai-alt-text' ); ?></span>
+                                <strong><?php esc_html_e( 'Bulk Alt-Text Scanner:', 'forgehub-ai-alt-text' ); ?></strong>
+                                <span><?php esc_html_e( 'Run the Bulk Alt-Text Scanner below to fill missing Alt-Text across your media library in batches.', 'forgehub-ai-alt-text' ); ?></span>
                             </li>
                         </ol>
 
@@ -790,25 +863,12 @@ class WPFH_AAT_Admin {
             </div>
 
             <?php if ( ! $is_pro ) : ?>
-            <hr style="margin-top:40px;border:0;border-top:1px solid #ccd0d4;" />
-
-            <!-- PRO UPGRADE BANNER -->
-            <div class="wpfh-aat-pro-card">
-                <h2>🚀 <?php esc_html_e( 'Need Bulk Generation & Live Auto-Scan?', 'forgehub-ai-alt-text' ); ?></h2>
-                <p>
-                    <?php esc_html_e( 'With AI Alt Text PRO, you never have to click images one-by-one again:', 'forgehub-ai-alt-text' ); ?>
-                </p>
-                <ul class="wpfh-aat-feature-list">
-                    <li>⚡ <strong><?php esc_html_e( 'Background Bulk Scanner:', 'forgehub-ai-alt-text' ); ?></strong> <?php esc_html_e( 'Scan your entire 10,000+ media library via WP-Cron / AJAX with zero timeouts.', 'forgehub-ai-alt-text' ); ?></li>
-                    <li>📷 <strong><?php esc_html_e( 'Instant Upload Hook:', 'forgehub-ai-alt-text' ); ?></strong> <?php esc_html_e( 'Automatically generates alt-text the exact second you upload a new photo.', 'forgehub-ai-alt-text' ); ?></li>
-                    <li>🛍️ <strong><?php esc_html_e( 'WooCommerce Context:', 'forgehub-ai-alt-text' ); ?></strong> <?php esc_html_e( 'Includes product title, SKU, and categories in product image alt tags.', 'forgehub-ai-alt-text' ); ?></li>
-                </ul>
-                <p>
-                    <a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" class="button button-primary button-hero" target="_blank">
-                        <?php esc_html_e( 'Upgrade to Pro — Just $5/mo ($39 Lifetime)', 'forgehub-ai-alt-text' ); ?>
-                    </a>
-                </p>
-            </div>
+            <p class="description" style="margin-top:24px;padding-top:16px;border-top:1px solid #dcdcde;color:#50575e;">
+                <?php esc_html_e( 'Need instant auto-generation on upload, WooCommerce product context, unlimited background bulk scanning, or priority support?', 'forgehub-ai-alt-text' ); ?>
+                <a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" target="_blank" rel="noopener noreferrer">
+                    <?php esc_html_e( 'Priority Support & Pro', 'forgehub-ai-alt-text' ); ?> &rarr;
+                </a>
+            </p>
             <?php endif; ?>
         </div>
         <?php

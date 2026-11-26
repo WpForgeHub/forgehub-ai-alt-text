@@ -5,7 +5,7 @@
 </p>
 
 [![License](https://img.shields.io/badge/License-GPL%20v2%2B-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
-[![Version](https://img.shields.io/badge/Version-v1.1.5-purple.svg)](https://github.com/WpForgeHub/forgehub-ai-alt-text/releases/tag/v1.1.5)
+[![Version](https://img.shields.io/badge/Version-v1.2.0-purple.svg)](https://github.com/WpForgeHub/forgehub-ai-alt-text/releases/tag/v1.2.0)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4.svg)](https://php.net/)
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-21759b.svg)](https://wordpress.org/)
 [![Tested](https://img.shields.io/badge/Tested-WP%207.1-brightgreen.svg)](https://wordpress.org/)
@@ -17,9 +17,9 @@
 
 <p align="center">
   <a href="https://github.com/WpForgeHub/forgehub-ai-alt-text/releases/latest/download/forgehub-ai-alt-text-free.zip">
-    <img src="https://img.shields.io/badge/📥_Download_Free_ZIP-v1.1.5-2563eb?style=for-the-badge&logo=wordpress&logoColor=white" alt="Download Free ZIP" />
+    <img src="https://img.shields.io/badge/📥_Download_Free_ZIP-v1.2.0-2563eb?style=for-the-badge&logo=wordpress&logoColor=white" alt="Download Free ZIP" />
   </a>
-  <a href="https://wpforgehub.com/plugins/ai-alt-text/">
+  <a href="https://wpforgehub.com/product/ai-alt-text/">
     <img src="https://img.shields.io/badge/🌐_Plugin_Homepage-WPForgeHub-0f172a?style=for-the-badge" alt="Plugin Page" />
   </a>
 </p>
@@ -64,7 +64,7 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 | **Multi-Field Selection (Alt, Title, Caption, Desc)** | ✅ | ✅ |
 | **Preserve Manual Edits (Overwrite Policy)** | ✅ | ✅ |
 | **Brand & Niche Context Guidance** | ✅ | ✅ |
-| **Background Bulk Scanner (WP-Cron)** | ❌ | **✅ (10,000+ Images)** |
+| **Bulk Alt-Text Scanner** | ✅ (Up to 20/run) | **✅ (Unlimited / 10,000+)** |
 | **Instant Upload Automation (`add_attachment`)** | ❌ | **✅ Automatic** |
 | **WooCommerce Context (Title, SKU, Category)** | ❌ | **✅ Deep SEO** |
 | **Priority Developer Support** | ❌ | **✅ Included** |
@@ -79,7 +79,7 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 | **5 Sites** | $7.99 / mo | **$39 / yr** | $79 *(One-time)* | Freelancers & web developers |
 | **Unlimited Sites** | $12.99 / mo | **$69 / yr** | $129 *(One-time)* | Agencies & multi-site networks |
 
-👉 **[Get PRO on WPForgeHub](https://wpforgehub.com/plugins/ai-alt-text/)** — Instant license delivery, automatic updates, and 14-day money-back guarantee.
+👉 **[Get PRO on WPForgeHub](https://wpforgehub.com/product/ai-alt-text/)** — Instant license delivery, automatic updates, and 14-day money-back guarantee.
 
 ---
 
