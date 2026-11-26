@@ -117,4 +117,4 @@ git clone https://github.com/WpForgeHub/forgehub-ai-alt-text.git
 Crafted with care by the **[WPForgeHub](https://wpforgehub.com)** team.
 * Website: [https://wpforgehub.com](https://wpforgehub.com)
 * GitHub: [@WpForgeHub](https://github.com/WpForgeHub)
-* Support: `support@wpforgehub.com`
+* Support: [WPForgeHub Support Portal](https://wpforgehub.com/support/) & [GitHub Issues](https://github.com/WpForgeHub/forgehub-ai-alt-text/issues)
