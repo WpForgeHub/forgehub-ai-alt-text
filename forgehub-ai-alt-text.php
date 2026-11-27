@@ -3,7 +3,7 @@
  * Plugin Name:       ForgeHub AI Alt Text
  * Plugin URI:        https://wpforgehub.com/plugins/ai-alt-text/
  * Description:       Generate WCAG-compliant image Alt-Text and SEO titles using your own Google Gemini, OpenAI, Claude, DeepSeek, or OpenRouter API key (BYOK).
- * Version:           1.2.0
+ * Version:           1.2.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            WPForgeHub
@@ -15,93 +15,109 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+	exit;
 }
 
 // Version & Path Constants
-define( 'WPFH_AAT_VERSION', '1.2.0' );
+define( 'WPFH_AAT_VERSION', '1.2.1' );
 define( 'WPFH_AAT_FILE', __FILE__ );
 define( 'WPFH_AAT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'WPFH_AAT_URL', plugin_dir_url( __FILE__ ) );
 
+// <wpfh-pro-only>
 /**
- * Freemius Integration Wrapper
+ * Freemius Integration Wrapper (Pro build only).
  */
 if ( ! function_exists( 'wpfh_aat_fs' ) ) {
-    function wpfh_aat_fs() {
-        global $wpfh_aat_fs;
+	function wpfh_aat_fs() {
+		global $wpfh_aat_fs;
 
-        if ( ! isset( $wpfh_aat_fs ) ) {
-            $force_pro     = defined( 'WPFH_AAT_FORCE_PRO' ) && WPFH_AAT_FORCE_PRO;
-            $freemius_path = WPFH_AAT_PATH . 'includes/freemius/start.php';
+		if ( ! isset( $wpfh_aat_fs ) ) {
+			$force_pro     = defined( 'WPFH_AAT_FORCE_PRO' ) && WPFH_AAT_FORCE_PRO;
+			$freemius_path = WPFH_AAT_PATH . 'freemius/start.php';
+			if ( ! file_exists( $freemius_path ) ) {
+				$freemius_path = WPFH_AAT_PATH . 'includes/freemius/start.php';
+			}
 
-            if ( file_exists( $freemius_path ) && ! $force_pro ) {
-                require_once $freemius_path;
+			if ( file_exists( $freemius_path ) && ! $force_pro ) {
+				require_once $freemius_path;
 
-                $wpfh_aat_fs = fs_dynamic_init( [
-                    'id'               => '44985',
-                    'slug'             => 'ai-alt-text-generator',
-                    'type'             => 'plugin',
-                    'public_key'       => 'pk_862f10dd7623aebdb2cd2e4e4f840',
-                    'is_premium'       => false,
-                    'has_addons'       => false,
-                    'has_paid_plans'   => true,
-                    'menu'             => [
-                        'slug'    => 'forgehub-ai-alt-text',
-                        'support' => false,
-                    ],
-                ] );
-            } else {
-                // Standalone fallback object for Free / Sandbox QA testing
-                $wpfh_aat_fs = new class( $force_pro ) {
-                    private $is_pro;
-                    public function __construct( $is_pro = false ) { $this->is_pro = (bool) $is_pro; }
-                    public function is__premium_only() { return $this->is_pro; }
-                    public function can_use_premium_code() { return $this->is_pro; }
-                    public function is_plan( $plan ) { return $this->is_pro; }
-                    public function get_upgrade_url() { return 'https://wpforgehub.com/product/ai-alt-text/#pricing'; }
-                };
-            }
-        }
+				$wpfh_aat_fs = fs_dynamic_init( [
+					'id'             => '44985',
+					'slug'           => 'ai-alt-text-generator',
+					'type'           => 'plugin',
+					'public_key'     => 'pk_862f10dd7623aebdb2cd2e4e4f840',
+					'is_premium'     => false,
+					'has_addons'     => false,
+					'has_paid_plans' => true,
+					'menu'           => [
+						'slug'    => 'forgehub-ai-alt-text',
+						'support' => false,
+					],
+				] );
+				// Freemius forbids uninstall.php in premium builds; use its after_uninstall hook there.
+				$wpfh_aat_fs->add_action( 'after_uninstall', 'wpfh_aat_uninstall_cleanup' );
+			} else {
+				// Standalone fallback object for Sandbox QA testing
+				$wpfh_aat_fs = new class( $force_pro ) {
+					private $is_pro;
+					public function __construct( $is_pro = false ) { $this->is_pro = (bool) $is_pro; }
+					public function is__premium_only() { return $this->is_pro; }
+					public function can_use_premium_code() {
+						// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+						return $this->is_pro || (bool) apply_filters( 'fs_can_use_premium_code__forgehub-ai-alt-text', false );
+					}
+					public function is_plan( $plan ) {
+						// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+						return $this->is_pro || (bool) apply_filters( 'fs_is_plan__forgehub-ai-alt-text', false, $plan );
+					}
+					public function get_upgrade_url() { return 'https://wpforgehub.com/product/ai-alt-text/#pricing'; }
+				};
+			}
+		}
 
-        return $wpfh_aat_fs;
-    }
+		return $wpfh_aat_fs;
+	}
 
-    // Initialize Freemius
-    wpfh_aat_fs();
+	// Initialize Freemius
+	wpfh_aat_fs();
 }
+
+/**
+ * Removes plugin options (Freemius premium build; free build uses uninstall.php).
+ */
+function wpfh_aat_uninstall_cleanup() {
+	delete_option( 'wpfh_aat_settings' );
+	delete_site_option( 'wpfh_aat_settings' );
+	delete_option( 'wpfh_aat_review_nudge' );
+	delete_site_option( 'wpfh_aat_review_nudge' );
+	delete_transient( 'wpfh_aat_bulk_queue' );
+	delete_site_transient( 'wpfh_aat_bulk_queue' );
+}
+// </wpfh-pro-only>
 
 // Load Core Dependencies
 require_once WPFH_AAT_PATH . 'includes/class-wpfh-ai-client.php';
 require_once WPFH_AAT_PATH . 'includes/class-wpfh-review-nudge.php';
 require_once WPFH_AAT_PATH . 'includes/class-wpfh-aat-admin.php';
 
+// <wpfh-pro-only>
+if ( file_exists( WPFH_AAT_PATH . 'includes/pro/class-wpfh-aat-pro.php' ) ) {
+	require_once WPFH_AAT_PATH . 'includes/pro/class-wpfh-aat-pro.php';
+}
+// </wpfh-pro-only>
+
 /**
  * Main Plugin Initialization
  */
 function wpfh_aat_init() {
-    WPFH_AAT_Admin::init();
+	WPFH_AAT_Admin::init();
 
-    if ( is_admin() && class_exists( 'WPFH_Review_Nudge' ) ) {
-        $nudge = new WPFH_Review_Nudge( [
-            'plugin_slug'   => 'forgehub-ai-alt-text',
-            'plugin_name'   => 'ForgeHub AI Alt Text',
-            'option_prefix' => 'wpfh_aat',
-            'github_url'    => 'https://github.com/WpForgeHub/forgehub-ai-alt-text',
-            'min_actions'   => 5,
-            'min_days'      => 7,
-            'screens'       => [ 'settings_page_forgehub-ai-alt-text', 'upload' ],
-            'strings'       => [
-                'heading'     => __( 'Enjoying ForgeHub AI Alt Text?', 'forgehub-ai-alt-text' ),
-                'message'     => __( 'If ForgeHub AI Alt Text has saved you time, a quick 5-star review helps other site owners discover it and keeps development active.', 'forgehub-ai-alt-text' ),
-                'rate_cta'    => __( 'Rate 5 Stars on WordPress.org', 'forgehub-ai-alt-text' ),
-                'github_cta'  => __( 'Star on GitHub', 'forgehub-ai-alt-text' ),
-                'later_cta'   => __( 'Maybe later', 'forgehub-ai-alt-text' ),
-                'dismiss_cta' => __( 'Already did / Dismiss', 'forgehub-ai-alt-text' ),
-            ],
-        ] );
-        $nudge->register();
-    }
+	// <wpfh-pro-only>
+	if ( class_exists( 'WPFH_AAT_Pro' ) ) {
+		WPFH_AAT_Pro::init();
+	}
+	// </wpfh-pro-only>
 }
 add_action( 'plugins_loaded', 'wpfh_aat_init' );
 
@@ -109,13 +125,14 @@ add_action( 'plugins_loaded', 'wpfh_aat_init' );
  * Settings action link in Plugins screen
  */
 function wpfh_aat_action_links( $links ) {
-    $settings_link = '<a href="' . esc_url( admin_url( 'options-general.php?page=forgehub-ai-alt-text' ) ) . '">' . esc_html__( 'Settings', 'forgehub-ai-alt-text' ) . '</a>';
-    array_unshift( $links, $settings_link );
+	$settings_link = '<a href="' . esc_url( admin_url( 'options-general.php?page=forgehub-ai-alt-text' ) ) . '">' . esc_html__( 'Settings', 'forgehub-ai-alt-text' ) . '</a>';
+	array_unshift( $links, $settings_link );
 
-    if ( ! wpfh_aat_fs()->can_use_premium_code() ) {
-        $links['go_pro'] = '<a href="' . esc_url( wpfh_aat_fs()->get_upgrade_url() ) . '" style="color:#2563eb;font-weight:600;" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Priority Support & Pro', 'forgehub-ai-alt-text' ) . '</a>';
-    }
+	if ( ! apply_filters( 'wpfh_aat_is_pro', false ) ) {
+		$upgrade_url     = apply_filters( 'wpfh_aat_upgrade_url', 'https://wpforgehub.com/product/ai-alt-text/#pricing' );
+		$links['go_pro'] = '<a href="' . esc_url( $upgrade_url ) . '" style="color:#2563eb;font-weight:600;" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Priority Support & Pro', 'forgehub-ai-alt-text' ) . '</a>';
+	}
 
-    return $links;
+	return $links;
 }
 add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'wpfh_aat_action_links' );

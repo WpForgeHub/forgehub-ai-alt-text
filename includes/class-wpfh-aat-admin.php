@@ -56,9 +56,6 @@ class WPFH_AAT_Admin {
         add_filter( 'attachment_fields_to_edit', [ __CLASS__, 'add_media_modal_button' ], 10, 2 );
         add_action( 'wp_ajax_wpfh_aat_generate_single', [ __CLASS__, 'ajax_generate_single' ] );
 
-        // Pro Feature: Instant Auto-Generate on Upload Hook
-        add_action( 'add_attachment', [ __CLASS__, 'handle_auto_generate_on_upload' ] );
-
         // Bulk Scanner AJAX Endpoints (Free up to 20 images/run, Pro unlimited)
         add_action( 'wp_ajax_wpfh_aat_bulk_get_stats', [ __CLASS__, 'ajax_bulk_get_stats' ] );
         add_action( 'wp_ajax_wpfh_aat_bulk_process_batch', [ __CLASS__, 'ajax_bulk_process_batch' ] );
@@ -174,7 +171,7 @@ class WPFH_AAT_Admin {
             'providers'        => WPFH_AI_Client::get_providers(),
             'current_provider' => $settings['provider'],
             'current_model'    => $settings['model'],
-            'is_pro'           => wpfh_aat_fs()->can_use_premium_code(),
+            'is_pro'           => (bool) apply_filters( 'wpfh_aat_is_pro', false ),
             'i18n'             => [
                 'generating'   => __( 'Analyzing image...', 'forgehub-ai-alt-text' ),
                 'success'      => __( 'Alt-Text generated!', 'forgehub-ai-alt-text' ),
@@ -279,33 +276,8 @@ class WPFH_AAT_Admin {
             $enabled_fields = [ 'alt_text' ];
         }
 
-        // Pro Feature: WooCommerce Context Detection
-        $woo_context = '';
-        if ( wpfh_aat_fs()->can_use_premium_code() && ! empty( $settings['enable_woo_context'] ) && class_exists( 'WooCommerce' ) ) {
-            $parent_id = wp_get_post_parent_id( $attachment_id );
-            if ( ! $parent_id ) {
-                global $wpdb;
-                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off lookup of the product that uses this attachment.
-                $parent_id = (int) $wpdb->get_var( $wpdb->prepare(
-                    "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_thumbnail_id' AND meta_value = %d LIMIT 1",
-                    $attachment_id
-                ) );
-            }
-
-            if ( $parent_id && 'product' === get_post_type( $parent_id ) ) {
-                $product = wc_get_product( $parent_id );
-                if ( $product ) {
-                    $sku = $product->get_sku();
-                    $cats = wc_get_product_category_list( $parent_id, ', ' );
-                    $woo_context = sprintf(
-                        ' [WooCommerce Product: "%s" (SKU: %s, Category: %s). Weave these commercial product keywords naturally into the alt-text.]',
-                        $product->get_name(),
-                        $sku ? $sku : 'N/A',
-                        $cats ? wp_strip_all_tags( $cats ) : 'General'
-                    );
-                }
-            }
-        }
+        // Optional extended context (e.g. WooCommerce product enrichment in Pro).
+        $woo_context = (string) apply_filters( 'wpfh_aat_prompt_context', '', $attachment_id, $settings );
 
         $instructions = [];
         $json_keys    = [];
@@ -469,31 +441,7 @@ class WPFH_AAT_Admin {
     }
 
     /**
-     * Pro Feature: Automatic Generation on Media Upload Hook.
-     */
-    public static function handle_auto_generate_on_upload( $attachment_id ) {
-        $settings = self::get_settings();
-
-        // Gated: Pro Plan only
-        if ( ! wpfh_aat_fs()->can_use_premium_code() || empty( $settings['auto_generate_upload'] ) ) {
-            return;
-        }
-
-        if ( ! wp_attachment_is_image( $attachment_id ) ) {
-            return;
-        }
-
-        $enabled_fields = [];
-        if ( ! empty( $settings['generate_alt'] ) )     $enabled_fields[] = 'alt_text';
-        if ( ! empty( $settings['generate_title'] ) )   $enabled_fields[] = 'title';
-        if ( ! empty( $settings['generate_caption'] ) ) $enabled_fields[] = 'caption';
-        if ( ! empty( $settings['generate_desc'] ) )    $enabled_fields[] = 'description';
-
-        self::process_attachment_ai( $attachment_id, $enabled_fields, (bool) $settings['overwrite_existing'] );
-    }
-
-    /**
-     * Pro Feature: Bulk Scanner Stats Endpoint.
+     * Bulk Scanner Stats Endpoint.
      */
     public static function ajax_bulk_get_stats() {
         check_ajax_referer( 'wpfh_aat_nonce', 'security' );
@@ -519,12 +467,12 @@ class WPFH_AAT_Admin {
             'total_images' => $total_images,
             'missing_alt'  => $missing_alt,
             'completed'    => $total_images - $missing_alt,
-            'is_pro'       => wpfh_aat_fs()->can_use_premium_code(),
+            'is_pro'       => (bool) apply_filters( 'wpfh_aat_is_pro', false ),
         ] );
     }
 
     /**
-     * Pro Feature: Bulk Scanner Batch Processing Endpoint.
+     * Bulk Scanner Batch Processing Endpoint.
      */
     public static function ajax_bulk_process_batch() {
         check_ajax_referer( 'wpfh_aat_nonce', 'security' );
@@ -533,7 +481,7 @@ class WPFH_AAT_Admin {
         }
 
         // Free allows up to 20 images per bulk run; Pro runs unlimited background queues.
-        $is_pro            = wpfh_aat_fs()->can_use_premium_code();
+        $is_pro            = (bool) apply_filters( 'wpfh_aat_is_pro', false );
         $session_processed = isset( $_POST['session_processed'] ) ? absint( $_POST['session_processed'] ) : 0;
         $free_run_limit    = 20;
 
@@ -628,7 +576,7 @@ class WPFH_AAT_Admin {
     public static function render_settings_page() {
         $settings  = self::get_settings();
         $providers = WPFH_AI_Client::get_providers();
-        $is_pro    = wpfh_aat_fs()->can_use_premium_code();
+        $is_pro    = (bool) apply_filters( 'wpfh_aat_is_pro', false );
         ?>
         <div class="wrap wpfh-aat-wrap">
             <h1><?php esc_html_e( 'AI Alt Text & Image SEO', 'forgehub-ai-alt-text' ); ?></h1>
@@ -666,7 +614,7 @@ class WPFH_AAT_Admin {
                             <tr id="wpfh_custom_endpoint_row" style="<?php echo 'custom' === $settings['provider'] ? '' : 'display:none;'; ?>">
                                 <th scope="row"><label for="wpfh_custom_endpoint"><?php esc_html_e( 'Custom Base URL', 'forgehub-ai-alt-text' ); ?></label></th>
                                 <td>
-                                    <input name="wpfh_aat_settings[custom_endpoint]" type="url" id="wpfh_custom_endpoint" value="<?php echo esc_attr( $settings['custom_endpoint'] ); ?>" class="regular-text" placeholder="http://localhost:11434/v1" />
+                                    <input name="wpfh_aat_settings[custom_endpoint]" type="url" id="wpfh_custom_endpoint" value="<?php echo esc_attr( $settings['custom_endpoint'] ); ?>" class="regular-text" placeholder="https://api.example.com/v1" />
                                     <p class="description"><?php esc_html_e( 'OpenAI-compatible endpoint URL for local Ollama, Groq, vLLM, etc.', 'forgehub-ai-alt-text' ); ?></p>
                                 </td>
                             </tr>
@@ -769,31 +717,7 @@ class WPFH_AAT_Admin {
                                 </td>
                             </tr>
 
-                            <?php if ( $is_pro ) : ?>
-                            <!-- PRO AUTOMATION SECTION -->
-                            <tr style="border-top:1px solid #e2e8f0;">
-                                <th scope="row">
-                                    <?php esc_html_e( 'Automation & WooCommerce', 'forgehub-ai-alt-text' ); ?>
-                                </th>
-                                <td>
-                                    <label for="wpfh_auto_upload" style="display:block;margin-bottom:10px;">
-                                        <input name="wpfh_aat_settings[auto_generate_upload]" type="checkbox" id="wpfh_auto_upload" value="1" <?php checked( $settings['auto_generate_upload'], 1 ); ?> />
-                                        <strong>📷 <?php esc_html_e( 'Instant Auto-Generate on Upload', 'forgehub-ai-alt-text' ); ?></strong>
-                                        <span class="description" style="display:block;margin-left:24px;color:#50575e;">
-                                            <?php esc_html_e( 'Automatically analyzes and saves Alt Text the exact second an image is uploaded to WordPress.', 'forgehub-ai-alt-text' ); ?>
-                                        </span>
-                                    </label>
-
-                                    <label for="wpfh_enable_woo" style="display:block;">
-                                        <input name="wpfh_aat_settings[enable_woo_context]" type="checkbox" id="wpfh_enable_woo" value="1" <?php checked( $settings['enable_woo_context'], 1 ); ?> />
-                                        <strong>🛍️ <?php esc_html_e( 'WooCommerce Product Context Injection', 'forgehub-ai-alt-text' ); ?></strong>
-                                        <span class="description" style="display:block;margin-left:24px;color:#50575e;">
-                                            <?php esc_html_e( 'Enriches alt text with WooCommerce product title, SKU code, and category keywords.', 'forgehub-ai-alt-text' ); ?>
-                                        </span>
-                                    </label>
-                                </td>
-                            </tr>
-                            <?php endif; ?>
+                            <?php do_action( 'wpfh_aat_settings_pro_rows', $settings ); ?>
                         </table>
 
                         <?php submit_button(); ?>
@@ -865,7 +789,7 @@ class WPFH_AAT_Admin {
             <?php if ( ! $is_pro ) : ?>
             <p class="description" style="margin-top:24px;padding-top:16px;border-top:1px solid #dcdcde;color:#50575e;">
                 <?php esc_html_e( 'Need instant auto-generation on upload, WooCommerce product context, unlimited background bulk scanning, or priority support?', 'forgehub-ai-alt-text' ); ?>
-                <a href="<?php echo esc_url( wpfh_aat_fs()->get_upgrade_url() ); ?>" target="_blank" rel="noopener noreferrer">
+                <a href="<?php echo esc_url( apply_filters( 'wpfh_aat_upgrade_url', 'https://wpforgehub.com/product/ai-alt-text/#pricing' ) ); ?>" target="_blank" rel="noopener noreferrer">
                     <?php esc_html_e( 'Priority Support & Pro', 'forgehub-ai-alt-text' ); ?> &rarr;
                 </a>
             </p>

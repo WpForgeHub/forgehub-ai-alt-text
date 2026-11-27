@@ -3,7 +3,7 @@ Contributors: wpforgehub
 Tags: alt text, image seo, ai alt text, gemini, accessibility
 Requires at least: 6.0
 Tested up to: 7.1
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -60,6 +60,11 @@ Not at all. The plugin executes solely in the WordPress admin dashboard and medi
 1. AI Alt-Text BYOK settings panel with OpenAI, Anthropic Claude, and Google Gemini provider configuration and field controls.
 
 == Changelog ==
+
+= 1.2.1 =
+* Architecture: Separated Pro features (Auto-Upload, WooCommerce Context) into `includes/pro/` for clean Free/Pro builds.
+* Fix: Replaced localhost placeholder URL in Custom Base URL setting with a generic example URL.
+* Fix: Added `after_uninstall` cleanup hook for Pro builds and removed duplicate review nudge registration.
 
 = 1.2.0 =
 * Free-First & Zero-Nag: Removed aggressive Pro upgrade banner, hardcoded pricing text, and locked buttons from wp-admin.
