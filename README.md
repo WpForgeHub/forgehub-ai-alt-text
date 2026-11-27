@@ -83,6 +83,14 @@ Most AI plugins for WordPress charge recurring middleman markup fees and route y
 
 ---
 
+## 📸 Admin Preview
+
+<p align="center">
+  <img src="assets/screenshot-1.png" alt="ForgeHub AI Alt Text WordPress Admin Settings" width="100%" />
+</p>
+
+---
+
 ## 📦 Installation
 
 ### Option 1: Direct Download (Easiest)
@@ -118,3 +126,11 @@ Crafted with care by the **[WPForgeHub](https://wpforgehub.com)** team.
 * Website: [https://wpforgehub.com](https://wpforgehub.com)
 * GitHub: [@WpForgeHub](https://github.com/WpForgeHub)
 * Support: [WPForgeHub Support Portal](https://wpforgehub.com/support/) & [GitHub Issues](https://github.com/WpForgeHub/forgehub-ai-alt-text/issues)
+
+---
+
+## 🔗 Links & Resources
+
+- **Plugin Page:** [https://wpforgehub.com/product/ai-alt-text/](https://wpforgehub.com/product/ai-alt-text/)
+- **Documentation & Help:** [wpforgehub.com/docs](https://wpforgehub.com/docs/)
+- **More Free WordPress Plugins:** [wpforgehub.com](https://wpforgehub.com/#products)
