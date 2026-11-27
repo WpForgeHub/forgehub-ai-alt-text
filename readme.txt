@@ -55,6 +55,10 @@ Yes. The default prompt instructs the AI vision models to produce concise, objec
 = Does this plugin slow down my site frontend? =
 Not at all. The plugin executes solely in the WordPress admin dashboard and media modal when you choose to generate alt text. Zero scripts or stylesheets are loaded on your public frontend.
 
+== Screenshots ==
+
+1. AI Alt-Text BYOK settings panel with OpenAI, Anthropic Claude, and Google Gemini provider configuration and field controls.
+
 == Changelog ==
 
 = 1.2.0 =
